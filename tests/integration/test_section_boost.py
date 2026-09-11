@@ -2,8 +2,10 @@
 import sys
 sys.path.insert(0, '.')
 
+import pytest
 from vector_store import VectorStore
 
+@pytest.mark.integration
 def test_section_retrieval():
     print("=" * 60)
     print("IPC SECTION RETRIEVAL TEST")
