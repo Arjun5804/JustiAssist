@@ -1,0 +1,17 @@
+section,law_type,description,bailable,max_punishment_years,cognizable
+3,POCSO,"Penetrative sexual assault",No,"Seven years to Life",Yes
+4,POCSO,"Punishment for penetrative sexual assault",No,"Imprisonment for not less than 10 years but which may extend to imprisonment for life, and fine",Yes
+5,POCSO,"Aggravated penetrative sexual assault (by police/army/teacher/doctor/relative case)",No,"Life (mean remainder of natural life)",Yes
+6,POCSO,"Punishment for aggravated penetrative sexual assault",No,"Death or imprisonment for life (remainder of natural life)",Yes
+7,POCSO,"Sexual assault",No,"Five years",Yes
+8,POCSO,"Punishment for sexual assault",No,"Imprisonment for 3-5 years, and fine",Yes
+9,POCSO,"Aggravated sexual assault",No,"Seven years",Yes
+10,POCSO,"Punishment for aggravated sexual assault",No,"Imprisonment for 5-7 years, and fine",Yes
+11,POCSO,"Sexual harassment",No,"Three years",Yes
+12,POCSO,"Punishment for sexual harassment",No,"Imprisonment up to 3 years and fine",Yes
+16,POCSO,"Abetment of an offence",No,"Same as for offence",Yes
+17,POCSO,"Punishment for attempt to commit an offence",No,"One-half of life imprisonment or one-half of longest term",Yes
+29,POCSO,"Presumption as to certain offences. Where person is prosecuted for committing/abetting/attempting sexual offence, Special Court shall presume that such person has committed the offence.",NA,NA,NA
+32,POCSO,"Burden of proof - on the accused to prove he has not committed the offence.",NA,NA,NA
+33,POCSO,"Procedure and powers of Special Court (Int-camera trial, child-friendly procedures)",NA,NA,NA
+42A,POCSO,"Act not in derogation of any other law (If act is offence under IPC also, offender tried under law with greater punishment)",NA,NA,NA

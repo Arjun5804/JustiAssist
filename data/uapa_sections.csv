@@ -1,0 +1,13 @@
+section,law_type,description,bailable,max_punishment_years,cognizable
+10,UAPA,"Penalty for being member of an unlawful association",No,"2 years",Yes
+13,UAPA,"Punishment for unlawful activities",No,"7 years",Yes
+15,UAPA,"Terrorist act (Definition)",NA,NA,NA
+16,UAPA,"Punishment for terrorist act",No,"Death or Life Imprisonment",Yes
+17,UAPA,"Punishment for raising funds for terrorist act",No,"Life Imprisonment",Yes
+18,UAPA,"Punishment for conspiracy, etc.",No,"Life Imprisonment",Yes
+19,UAPA,"Punishment for harbouring, etc.",No,"Life Imprisonment",Yes
+20,UAPA,"Punishment for being member of terrorist gang or organisation",No,"Life Imprisonment",Yes
+38,UAPA,"Offence relating to membership of a terrorist organisation",No,"10 years",Yes
+39,UAPA,"Offence relating to support given to a terrorist organisation",No,"10 years",Yes
+43D,UAPA,"Modified application of certain provisions of the Code (Bail). (5) Accused shall not be released on bail if Court, on perusal of case diary/report, is of opinion that there are reasonable grounds for believing that accusation against such person is prima facie true.",NA,NA,NA
+43E,UAPA,"Presumption as to offence under section 15 (if arms/explosives found)",NA,NA,NA

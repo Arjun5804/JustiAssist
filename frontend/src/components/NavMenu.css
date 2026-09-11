@@ -1,0 +1,213 @@
+/* NavMenu - Animated Expanding Navigation */
+
+.nav-menu-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: var(--spacing-md) var(--spacing-xl);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--color-white);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nav-menu {
+    padding: 6px;
+    background: var(--color-navy);
+    position: relative;
+    display: flex;
+    justify-content: center;
+    border-radius: 12px;
+    box-shadow: var(--shadow-subtle);
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.nav-link {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 52px;
+    height: 44px;
+    border-radius: 8px;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    transform-origin: center left;
+    transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    color: var(--color-white);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.nav-link::before {
+    position: absolute;
+    z-index: -1;
+    content: "";
+    display: block;
+    border-radius: 8px;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center right;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link:hover,
+.nav-link:focus-visible {
+    outline: 0;
+    width: 140px;
+    color: var(--color-gold);
+}
+
+.nav-link:hover::before,
+.nav-link:focus-visible::before {
+    transform: translateX(0);
+}
+
+.nav-link:hover .nav-link-title,
+.nav-link:focus-visible .nav-link-title {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+/* Active state */
+.nav-link.active {
+    width: 140px;
+    color: var(--color-navy);
+}
+
+.nav-link.active::before {
+    transform: translateX(0);
+    background: var(--color-gold);
+    box-shadow: var(--shadow-subtle);
+}
+
+.nav-link.active .nav-link-title {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.nav-link.active .nav-link-icon svg {
+    color: var(--color-navy);
+    filter: none;
+}
+
+/* Icon */
+.nav-link-icon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    left: 14px;
+    position: absolute;
+}
+
+.nav-link-icon svg {
+    width: 20px;
+    height: 20px;
+    transition: color 0.28s ease, filter 0.28s ease;
+}
+
+/* Title */
+.nav-link-title {
+    transform: translateX(100%);
+    transition:
+        transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.2s ease;
+    transform-origin: center right;
+    display: block;
+    text-align: center;
+    text-indent: 26px;
+    width: 100%;
+    opacity: 0;
+    white-space: nowrap;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .nav-menu {
+        gap: 2px;
+        padding: 5px;
+    }
+
+    .nav-link {
+        width: 44px;
+        height: 40px;
+    }
+
+    .nav-link:hover,
+    .nav-link:focus-visible,
+    .nav-link.active {
+        width: 120px;
+    }
+
+    .nav-link-icon {
+        width: 20px;
+        height: 20px;
+        left: 12px;
+    }
+
+    .nav-link-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .nav-link-title {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .nav-menu-wrapper {
+        padding: var(--spacing-sm) var(--spacing-sm);
+    }
+
+    .nav-menu {
+        gap: 2px;
+        padding: 4px;
+        border-radius: 12px;
+    }
+
+    .nav-link {
+        width: 38px;
+        height: 36px;
+        border-radius: 8px;
+    }
+
+    .nav-link:hover,
+    .nav-link:focus-visible,
+    .nav-link.active {
+        width: 105px;
+    }
+
+    .nav-link::before {
+        border-radius: 8px;
+    }
+
+    .nav-link-icon {
+        width: 18px;
+        height: 18px;
+        left: 10px;
+    }
+
+    .nav-link-icon svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .nav-link-title {
+        font-size: 0.72rem;
+        text-indent: 22px;
+    }
+}

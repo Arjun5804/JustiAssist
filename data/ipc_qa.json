@@ -1,0 +1,42 @@
+[
+  {
+    "question": "What is the punishment for murder under IPC?",
+    "answer": "Under Section 302 IPC, the punishment for murder is death or imprisonment for life, and fine. This is a non-bailable and cognizable offence."
+  },
+  {
+    "question": "What is the difference between culpable homicide and murder?",
+    "answer": "Section 299 defines Culpable Homicide and Section 300 defines Murder. Culpable homicide amounts to murder if the act is done with the intention of causing death, or causing such bodily injury as the offender knows is likely to cause death. All murder is culpable homicide, but not all culpable homicide is murder."
+  },
+  {
+    "question": "Is theft a bailable offence?",
+    "answer": "Yes, theft under Section 379 IPC is a non-bailable offence according to the First Schedule of CrPC, punishable with imprisonment up to 3 years or fine or both."
+  },
+  {
+    "question": "What is Section 420 IPC?",
+    "answer": "Section 420 IPC deals with Cheating and dishonestly inducing delivery of property. The punishment is imprisonment of either description for a term which may extend to seven years, and shall also be liable to fine. It is a non-bailable and cognizable offence."
+  },
+  {
+    "question": "What is default bail under Section 167?",
+    "answer": "Default bail, also known as statutory bail, is a right to bail that accrues when the police fail to complete investigation and file a chargesheet within the specified period (90 days for offences punishable with death/life/10+ years; 60 days for others) under Section 167(2) CrPC."
+  },
+  {
+    "question": "Punsihment for rape under IPC Section 376",
+    "answer": "Under Section 376 IPC, the punishment for rape is rigorous imprisonment of not less than 10 years, which may extend to imprisonment for life, and fine. The offence is non-bailable and cognizable."
+  },
+  {
+    "question": "What is the punishment for Kidnapping under Section 363?",
+    "answer": "Section 363 IPC prescribes punishment for kidnapping with imprisonment of either description for a term which may extend to seven years, and shall also be liable to fine. It is a bailable offence."
+  },
+  {
+    "question": "Explain criminal conspiracy under Section 120B",
+    "answer": "Section 120B IPC provides punishment for criminal conspiracy. If the conspiracy is to commit an offence punishable with death, life imprisonment or rigorous imprisonment for 2 years or upwards, the punishment is same as abetment. For other offences, punishment is imprisonment up to 6 months or fine or both."
+  },
+  {
+    "question": "Is defamation a criminal offence?",
+    "answer": "Yes, Section 499 IPC defines defamation and Section 500 prescribes punishment: simple imprisonment for a term which may extend to two years, or with fine, or with both. It is a non-cognizable and bailable offence."
+  },
+  {
+    "question": "What constitutes dowry death?",
+    "answer": "Section 304B IPC defines Dowry Death. Where the death of a woman is caused by burns or bodily injury or occurs under abnormal circumstances within 7 years of marriage, and it is shown she was subjected to cruelty by husband/relatives for dowry, it is dowry death. Punishment is imprisonment for not less than 7 years but up to life."
+  }
+]

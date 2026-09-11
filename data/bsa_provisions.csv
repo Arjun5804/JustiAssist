@@ -1,0 +1,31 @@
+section,law_type,description,evidence_act_equivalent
+1,BSA,"Short title, application and commencement",1
+2,BSA,"Definitions (Document now includes electronic records)",3
+4,BSA,"May presume",5
+5,BSA,"Shall presume",4
+6,BSA,"Conclusive proof",4
+22,BSA,"Relevancy of facts forming part of same transaction (Res Gestae)",6
+24,BSA,"Facts which are the occasion, cause or effect of facts in issue",7
+26,BSA,"Conduct - motive, preparation and previous or subsequent conduct",8
+39,BSA,"Confession caused by inducement, threat or promise, when irrelevant in criminal proceeding",24
+40,BSA,"Confession to police officer not to be proved",25
+41,BSA,"Confession by accused while in custody of police not to be proved against him",26
+42,BSA,"How much of information received from accused may be proved (Discovery statement)",27
+57,BSA,"Primary evidence (Includes electronic record stored in original device)",62
+58,BSA,"Secondary evidence (Expanded definition)",63
+61,BSA,"Admissibility of electronic or digital record (Replaces 65B certificate with new certification requirement)",65B
+62,BSA,"Special provisions as to evidence relating to electronic record",65A
+63,BSA,"Admissibility of electronic records (Detailed process)",65B
+107,BSA,"Burden of proving death of person known to have been alive within thirty years",107
+108,BSA,"Burden of proving that person is alive who has not been heard of for seven years",108
+111,BSA,"Proof of good faith in transactions where one party is in relation of active confidence",111
+112,BSA,"Presumption as to certain offences (Abetment of suicide of married woman)",113A
+113,BSA,"Presumption as to dowry death",113B
+138,BSA,"Witnesses - who may testify",118
+139,BSA,"Witness unable to communicate verbally",119
+140,BSA,"Competency of husband and wife as witnesses",120
+142,BSA,"Official communications (Privilege)",124
+165,BSA,"Examination-in-chief, cross-examination and re-examination",137
+166,BSA,"Order of examinations",138
+170,BSA,"Leading questions",141
+171,BSA,"When leading questions may be asked",143

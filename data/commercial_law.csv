@@ -1,0 +1,20 @@
+act_name,section,description,notes
+Indian Contract Act,2,"Interpretation-clause (Offer, Acceptance, Promise, Consideration, Agreement, Contract).",definitions
+Indian Contract Act,10,"What agreements are contracts. Free consent, competent parties, lawful consideration/object, not expressly declared void.",validity
+Indian Contract Act,11,"Who are competent to contract (Age of majority, Sound mind, Not disqualified).",capacity
+Indian Contract Act,23,"What consideration and objects are lawful, and what not.",legality
+Indian Contract Act,25,"Agreement without consideration, void, unless it is in writing and registered, or is a promise to compensate for something done, or is a promise to pay a debt barred by limitation law.",consideration
+Indian Contract Act,73,"Compensation for loss or damage caused by breach of contract.",damages
+Indian Contract Act,74,"Compensation for breach of contract where penalty stipulated.",damages
+Indian Contract Act,124,"'Contract of indemnity' defined.",indemnity
+Indian Contract Act,126,"'Contract of guarantee', 'surety', 'principal debtor' and 'creditor' defined.",guarantee
+Companies Act (2013),2,"Definitions (Company, Director, Promoter, Prospectus, Subsidiary, Holding).",definitions
+Companies Act (2013),3,"Formation of company (Public, Private, One Person Company).",incorporation
+Companies Act (2013),135,"Corporate Social Responsibility (CSR). 2% of average net profits for specified companies.",compliance
+Companies Act (2013),149,"Company to have Board of Directors. Independent Directors requirement.",governance
+Companies Act (2013),230,"Power to compromise or make arrangements with creditors and members (Mergers & Amalgamations).",restructuring
+Companies Act (2013),447,"Punishment for fraud. Imprisonment 6 months to 10 years + fine.",offence
+Indian Partnership Act,4,"Definition of 'partnership', 'partner', 'firm' and 'firm name'.",definitions
+Indian Partnership Act,13,"Mutual rights and liabilities. Partners not entitled to remuneration, equal share in profits/losses (unless agreed).",rights
+Indian Partnership Act,32,"Retirement of a partner.",exit
+Indian Partnership Act,69,"Effect of non-registration. No suit to enforce a right arising from a contract shall be instituted in any Court by or on behalf of any person suing as a partner in a firm against the firm or any person alleged to be or to have been a partner in the firm unless the firm is registered.",registration

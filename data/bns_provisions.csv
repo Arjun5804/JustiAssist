@@ -1,0 +1,25 @@
+section,bns_equivalent,law_type,bailable,max_punishment_years,cognizable,compoundable,description,bnss_section
+103,302,BNS,No,Death/Life,Yes,No,Murder,483
+105,304,BNS,No,Life/10,Yes,No,Culpable homicide not amounting to murder,483
+106,304A,BNS,Yes,2,Yes,Yes,Death by negligence,482
+108,306,BNS,No,10,Yes,No,Abetment of suicide,483
+109,307,BNS,No,Life,Yes,No,Attempt to murder,483
+115,323,BNS,Yes,1,No,Yes,Voluntarily causing hurt,482
+117,325,BNS,Yes,7,Yes,No,Voluntarily causing grievous hurt,482
+118,326,BNS,No,Life/10,Yes,No,Voluntarily causing grievous hurt by dangerous weapons,483
+74,354,BNS,Yes,2,Yes,No,Assault or criminal force on woman,482
+75,354A,BNS,Yes,3,Yes,No,Sexual harassment,482
+64,376,BNS,No,10-Life,Yes,No,Rape,483
+66,376A,BNS,No,20-Life/Death,Yes,No,Rape causing death,483
+70,376D,BNS,No,20-Life,Yes,No,Gang rape,483
+137,379,BNS,Yes,3,No,No,Theft,482
+138,380,BNS,Yes,7,Yes,No,Theft in dwelling house,482
+308,384,BNS,Yes,3,Yes,No,Extortion,482
+309,392,BNS,No,10,Yes,No,Robbery,483
+310,395,BNS,No,Life,Yes,No,Dacoity,483
+316,420,BNS,Yes,7,No,No,Cheating and dishonestly inducing delivery,482
+85,498A,BNS,Yes,3,Yes,No,Cruelty by husband or relatives,482
+351,506,BNS,Yes,2,No,Yes,Criminal intimidation,482
+61,120B,BNS,No,Varies,Yes,No,Criminal conspiracy,483
+152,124A,BNS,No,7,Yes,No,Acts endangering sovereignty (replaced Sedition),483
+196,153A,BNS,Yes,3,Yes,No,Promoting enmity between groups,482

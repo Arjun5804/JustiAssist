@@ -1,0 +1,64 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# Node dependencies & frontend build artifacts
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+.npm/
+
+# FAISS Vector Index binary files & pickle artifacts (rebuilt via vector_store.py)
+*.faiss
+*.pkl
+vector_stores/*/*.faiss
+vector_stores/*/*.pkl
+
+# Databases & runtime storage
+*.db
+*.sqlite
+*.sqlite3
+justiassist.db
+
+# Cache & Logs
+data/kanoon_cache/
+logs/
+*.log
+audit_*.jsonl
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor / OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Scratch and temporary output files
+tmp_*
+out*.txt
+discovery_results*.txt
+search_test_result.txt
+test_output.txt
+bns_debug.json

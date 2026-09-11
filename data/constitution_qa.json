@@ -1,0 +1,42 @@
+[
+    {
+        "question": "Right to life and personal liberty under Constitution",
+        "answer": "Article 21 states that no person shall be deprived of his life or personal liberty except according to procedure established by law. This includes rights to fair trial, speedy trial, legal aid, and privacy."
+    },
+    {
+        "question": "Protection against self-incrimination",
+        "answer": "Article 20(3) of the Constitution provides that no person accused of any offence shall be compelled to be a witness against himself."
+    },
+    {
+        "question": "Protection against double jeopardy",
+        "answer": "Article 20(2) states that no person shall be prosecuted and punished for the same offence more than once (Autrefois convict)."
+    },
+    {
+        "question": "Right to Constitutional Remedies",
+        "answer": "Article 32 allows citizens to move the Supreme Court for enforcement of Fundamental Rights via writs like Habeas Corpus, Mandamus, Prohibition, Quo Warranto, and Certiorari."
+    },
+    {
+        "question": "Rights of arrested persons under Constitution",
+        "answer": "Article 22 guarantees: (1) Right to be informed of grounds of arrest, (2) Right to consult a legal practitioner, and (3) Right to be produced before a Magistrate within 24 hours."
+    },
+    {
+        "question": "What is Habeas Corpus?",
+        "answer": "Habeas Corpus is a writ issued by the Supreme Court (Art 32) or High Court (Art 226) directing a person detaining another to produce the body of the prisoner in court to test the legality of the detention."
+    },
+    {
+        "question": "Equality before law",
+        "answer": "Article 14 guarantees equality before the law and equal protection of the laws within the territory of India."
+    },
+    {
+        "question": "Uniform Civil Code",
+        "answer": "Article 44 (Directive Principle) states that the State shall endeavour to secure for the citizens a uniform civil code throughout the territory of India."
+    },
+    {
+        "question": "Separation of judiciary from executive",
+        "answer": "Article 50 directs the State to take steps to separate the judiciary from the executive in the public services of the State."
+    },
+    {
+        "question": "Free legal aid constitutional provision",
+        "answer": "Article 39A mandates the State to secure that the operation of the legal system promotes justice on a basis of equal opportunity, and provides free legal aid to ensure that opportunities for securing justice are not denied by reason of economic or other disabilities."
+    }
+]

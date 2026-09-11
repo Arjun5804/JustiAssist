@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JustiAssist - Indian Legal AI Assistant</title>
+    <meta name="description" content="Intelligent RAG & Agentic Bail Support System for Indian Legal Domain">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">⚖️</span>
+                <h1>JustiAssist</h1>
+            </div>
+            <p class="tagline">Intelligent Legal AI for Indian Bail Jurisprudence</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Query Section -->
+            <section class="query-section glass-card">
+                <h2>Ask Your Legal Question</h2>
+
+                <div class="mode-selector">
+                    <button class="mode-btn active" data-mode="auto">
+                        <span class="mode-icon">🔄</span>
+                        Auto Detect
+                    </button>
+                    <button class="mode-btn" data-mode="legal">
+                        <span class="mode-icon">📚</span>
+                        Legal Info
+                    </button>
+                    <button class="mode-btn" data-mode="bail">
+                        <span class="mode-icon">🔓</span>
+                        Bail Query
+                    </button>
+                </div>
+
+                <div class="query-input-container">
+                    <textarea id="queryInput"
+                        placeholder="E.g., What is the punishment for theft under IPC 379? OR Can I get bail for a murder charge after 90 days in custody?"
+                        rows="3"></textarea>
+                </div>
+
+                <!-- Bail-specific options -->
+                <div class="bail-options" id="bailOptions" style="display: none;">
+                    <div class="option-group">
+                        <label for="custodyDays">Days in Custody (optional)</label>
+                        <input type="number" id="custodyDays" min="0" placeholder="e.g., 45">
+                    </div>
+                    <div class="option-group">
+                        <label for="offenseSections">Charged Sections (optional)</label>
+                        <input type="text" id="offenseSections" placeholder="e.g., IPC 302, IPC 307">
+                    </div>
+                </div>
+
+                <!-- Document Upload -->
+                <div class="document-upload">
+                    <div class="upload-header" onclick="toggleUpload()">
+                        <span>📄 Upload Case Documents (Optional)</span>
+                        <span class="toggle-icon" id="uploadToggle">▼</span>
+                    </div>
+                    <div class="upload-content" id="uploadContent" style="display: none;">
+                        <p class="upload-hint">Upload FIR, charge sheet, or case documents for case-specific analysis
+                        </p>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="documentFile" accept=".txt,.pdf,.doc,.docx" multiple>
+                            <label for="documentFile" class="file-label">
+                                <span id="fileNameDisplay">Choose files (PDF, TXT, DOC) - Multiple allowed</span>
+                            </label>
+                        </div>
+
+                        <!-- Uploaded Documents List -->
+                        <div id="uploadedDocsList" class="uploaded-docs-list" style="display: none;">
+                            <div class="docs-header">
+                                <span>📂 Uploaded Documents</span>
+                                <button type="button" class="clear-docs-btn" onclick="clearAllDocuments()">🗑️ Clear
+                                    All</button>
+                            </div>
+                            <ul id="docsListItems"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="submit-btn" id="submitBtn">
+                    <span class="btn-text">Get Legal Insights</span>
+                    <span class="btn-loader" style="display: none;"></span>
+                </button>
+            </section>
+
+            <!-- Response Section -->
+            <section class="response-section" id="responseSection" style="display: none;">
+                <!-- Confidence Header -->
+                <div class="confidence-header glass-card">
+                    <div class="query-type-badge" id="queryTypeBadge">Legal Info</div>
+                    <div class="confidence-meter">
+                        <span class="confidence-label">Confidence</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidenceFill"></div>
+                        </div>
+                        <span class="confidence-value" id="confidenceValue">0%</span>
+                    </div>
+                    <div class="grounding-status" id="groundingStatus">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Grounded</span>
+                    </div>
+                </div>
+
+                <!-- Main Answer -->
+                <div class="answer-card glass-card">
+                    <h3>📋 Answer</h3>
+                    <div class="answer-content" id="answerContent"></div>
+                </div>
+
+                <!-- Bail Assessment (conditional) -->
+                <div class="bail-assessment-card glass-card" id="bailAssessmentCard" style="display: none;">
+                    <h3>⚖️ Bail Assessment</h3>
+                    <div class="bail-summary">
+                        <div class="likelihood-badge" id="likelihoodBadge">Medium</div>
+                        <div class="legal-reasoning" id="legalReasoning"></div>
+                    </div>
+                </div>
+
+                <!-- Citations -->
+                <div class="citations-card glass-card">
+                    <h3>📖 Legal Citations</h3>
+                    <div class="citations-list" id="citationsList"></div>
+                </div>
+
+                <!-- Processing Info -->
+                <details class="processing-details">
+                    <summary>🔍 Processing Details</summary>
+                    <div class="processing-content" id="processingContent"></div>
+                </details>
+            </section>
+
+            <!-- Sample Queries -->
+            <section class="samples-section">
+                <h3>Try Sample Queries</h3>
+                <div class="sample-queries">
+                    <button class="sample-query" onclick="setQuery('What is the punishment for murder under IPC 302?')">
+                        IPC 302 Punishment
+                    </button>
+                    <button class="sample-query"
+                        onclick="setQuery('Can I get bail for theft after 60 days in custody?')">
+                        Bail for Theft
+                    </button>
+                    <button class="sample-query" onclick="setQuery('What is anticipatory bail under CrPC 438?')">
+                        Anticipatory Bail
+                    </button>
+                    <button class="sample-query"
+                        onclick="setQuery('Is cheating under IPC 420 bailable or non-bailable?')">
+                        IPC 420 Bail Status
+                    </button>
+                    <button class="sample-query" onclick="setQuery('What are fundamental rights under Article 21?')">
+                        Article 21 Rights
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>⚠️ <strong>Disclaimer:</strong> This is an AI-generated information system for educational purposes only.
+                It does not constitute legal advice. Please consult a qualified advocate for case-specific guidance.</p>
+            <p class="tech-stack">Powered by RAG + FAISS + LiteLLM | Made for Indian Legal Domain</p>
+        </footer>
+    </div>
+
+    <script>
+        // State
+        let currentMode = 'auto';
+
+        // DOM Elements
+        const queryInput = document.getElementById('queryInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const responseSection = document.getElementById('responseSection');
+        const bailOptions = document.getElementById('bailOptions');
+        const modeButtons = document.querySelectorAll('.mode-btn');
+
+        // Mode Selection
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                modeButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMode = btn.dataset.mode;
+
+                // Show/hide bail options
+                if (currentMode === 'bail') {
+                    bailOptions.style.display = 'flex';
+                } else {
+                    bailOptions.style.display = 'none';
+                }
+            });
+        });
+
+        // Sample Query Helper
+        function setQuery(query) {
+            queryInput.value = query;
+            queryInput.focus();
+        }
+
+        // Submit Query
+        submitBtn.addEventListener('click', async () => {
+            const query = queryInput.value.trim();
+            if (!query) {
+                alert('Please enter a legal question');
+                return;
+            }
+
+            // Show loading
+            const btnText = submitBtn.querySelector('.btn-text');
+            const btnLoader = submitBtn.querySelector('.btn-loader');
+            btnText.style.display = 'none';
+            btnLoader.style.display = 'inline-block';
+            submitBtn.disabled = true;
+
+            try {
+                const requestBody = {
+                    query: query,
+                    mode: currentMode
+                };
+
+                // Add bail-specific options
+                if (currentMode === 'bail') {
+                    const custodyDays = document.getElementById('custodyDays').value;
+                    const offenseSections = document.getElementById('offenseSections').value;
+
+                    if (custodyDays) {
+                        requestBody.custody_days = parseInt(custodyDays);
+                    }
+                    if (offenseSections) {
+                        requestBody.offense_sections = offenseSections.split(',').map(s => s.trim());
+                    }
+                }
+
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Request failed');
+                }
+
+                const data = await response.json();
+                displayResponse(data);
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btnText.style.display = 'inline';
+                btnLoader.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Display Response
+        function displayResponse(data) {
+            responseSection.style.display = 'block';
+
+            // Query type badge
+            const badge = document.getElementById('queryTypeBadge');
+            badge.textContent = data.query_type === 'bail_related' ? '🔓 Bail Query' : '📚 Legal Info';
+            badge.className = 'query-type-badge ' + (data.query_type === 'bail_related' ? 'bail' : 'legal');
+
+            // Confidence
+            const confidence = Math.round(data.confidence_score * 100);
+            document.getElementById('confidenceValue').textContent = confidence + '%';
+            const fill = document.getElementById('confidenceFill');
+            fill.style.width = confidence + '%';
+            fill.className = 'confidence-fill ' + (confidence >= 70 ? 'high' : confidence >= 40 ? 'medium' : 'low');
+
+            // Grounding status
+            const groundingStatus = document.getElementById('groundingStatus');
+            const statusDot = groundingStatus.querySelector('.status-dot');
+            const statusText = groundingStatus.querySelector('.status-text');
+
+            if (data.grounding_status === 'pass') {
+                statusDot.className = 'status-dot pass';
+                statusText.textContent = 'Fully Grounded';
+            } else if (data.grounding_status === 'partial') {
+                statusDot.className = 'status-dot partial';
+                statusText.textContent = 'Partially Grounded';
+            } else {
+                statusDot.className = 'status-dot fail';
+                statusText.textContent = 'Low Grounding';
+            }
+
+            // Answer
+            document.getElementById('answerContent').innerHTML = formatAnswer(data.answer);
+
+            // Bail Assessment
+            const bailCard = document.getElementById('bailAssessmentCard');
+            if (data.bail_assessment) {
+                bailCard.style.display = 'block';
+
+                const likelihood = data.bail_assessment.bail_likelihood;
+                const likelihoodBadge = document.getElementById('likelihoodBadge');
+                likelihoodBadge.textContent = likelihood + ' Likelihood';
+                likelihoodBadge.className = 'likelihood-badge ' + likelihood.toLowerCase();
+
+                const reasoning = data.bail_assessment.legal_reasoning;
+                document.getElementById('legalReasoning').innerHTML = `
+                    <div class="reasoning-item"><strong>Status:</strong> ${reasoning.bailable_status}</div>
+                    <div class="reasoning-item"><strong>Max Punishment:</strong> ${reasoning.max_punishment}</div>
+                    <div class="reasoning-item"><strong>Severity:</strong> ${reasoning.severity_score}/10</div>
+                    <div class="reasoning-item"><strong>Provisions:</strong> ${reasoning.applicable_crpc.join(', ')}</div>
+                `;
+            } else {
+                bailCard.style.display = 'none';
+            }
+
+            // Citations
+            const citationsList = document.getElementById('citationsList');
+            citationsList.innerHTML = data.citations.map(c => `
+                <div class="citation-item">
+                    <div class="citation-header">
+                        <span class="citation-section">${c.section}</span>
+                        <span class="citation-type">${c.law_type}</span>
+                        <span class="citation-score">${(c.relevance_score * 100).toFixed(0)}% match</span>
+                    </div>
+                    <p class="citation-text">${c.text_preview}</p>
+                    <span class="citation-source">Source: ${c.source}</span>
+                </div>
+            `).join('');
+
+            // Processing info
+            document.getElementById('processingContent').innerHTML = `
+                <ul>${data.processing_info.steps.map(s => `<li>${s}</li>`).join('')}</ul>
+            `;
+
+            // Scroll to response
+            responseSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Format answer with markdown-like styling
+        function formatAnswer(text) {
+            return text
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/^## (.*?)$/gm, '<h4>$1</h4>')
+                .replace(/^- (.*?)$/gm, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+        }
+
+        // Enter key to submit
+        queryInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitBtn.click();
+            }
+        });
+
+        // Document upload functions
+        function toggleUpload() {
+            const content = document.getElementById('uploadContent');
+            const toggle = document.getElementById('uploadToggle');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▼';
+            }
+        }
+
+        // Session state
+        let currentSessionId = null;
+        let uploadedDocuments = [];
+
+        // File input change handler - show selected files
+        document.getElementById('documentFile').addEventListener('change', function (e) {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) {
+                document.getElementById('fileNameDisplay').textContent = 'Choose files (PDF, TXT, DOC) - Multiple allowed';
+                return;
+            }
+            const names = files.map(f => f.name).join(', ');
+            document.getElementById('fileNameDisplay').textContent = names;
+        });
+
+        // Clear all documents
+        async function clearAllDocuments() {
+            if (!currentSessionId) {
+                uploadedDocuments = [];
+                updateDocsListUI();
+                return;
+            }
+
+            try {
+                const response = await fetch(`/session/${currentSessionId}/documents`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    uploadedDocuments = [];
+                    updateDocsListUI();
+                    alert('All documents cleared!');
+                }
+            } catch (error) {
+                console.error('Error clearing documents:', error);
+            }
+        }
+
+        // Delete single document  
+        async function deleteDocument(docId) {
+            if (!currentSessionId) return;
+
+            try {
+                const response = await fetch(`/session/${currentSessionId}/document/${docId}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    uploadedDocuments = uploadedDocuments.filter(d => d.document_id !== docId);
+                    updateDocsListUI();
+                }
+            } catch (error) {
+                console.error('Error deleting document:', error);
+            }
+        }
+
+        // Update document list UI
+        function updateDocsListUI() {
+            const listContainer = document.getElementById('uploadedDocsList');
+            const listItems = document.getElementById('docsListItems');
+
+            if (uploadedDocuments.length === 0) {
+                listContainer.style.display = 'none';
+                return;
+            }
+
+            listContainer.style.display = 'block';
+            listItems.innerHTML = uploadedDocuments.map(doc => `
+                <li class="doc-item">
+                    <span class="doc-name">📄 ${doc.filename}</span>
+                    <span class="doc-chunks">${doc.chunk_count} chunks</span>
+                    <button type="button" class="delete-doc-btn" onclick="deleteDocument('${doc.document_id}')">❌</button>
+                </li>
+            `).join('');
+        }
+
+        // Modified submit to handle multi-document upload
+        submitBtn.addEventListener('click', async function (e) {
+            const fileInput = document.getElementById('documentFile');
+            const files = Array.from(fileInput.files);
+
+            // If no files, use regular query endpoint (already handled by first listener)
+            if (files.length === 0) return;
+
+            e.stopImmediatePropagation();
+            e.preventDefault();
+
+            const query = queryInput.value.trim();
+            if (!query) {
+                alert('Please enter a legal question');
+                return;
+            }
+
+            // Show loading
+            const btnText = submitBtn.querySelector('.btn-text');
+            const btnLoader = submitBtn.querySelector('.btn-loader');
+            btnText.style.display = 'none';
+            btnLoader.style.display = 'inline-block';
+            submitBtn.disabled = true;
+
+            try {
+                // Upload each file sequentially to same session
+                let lastResponse = null;
+                for (const file of files) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('query', query);
+                    formData.append('mode', currentMode);
+                    if (currentSessionId) {
+                        formData.append('session_id', currentSessionId);
+                    }
+
+                    const response = await fetch('/upload-document', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.detail || 'Upload failed');
+                    }
+
+                    lastResponse = await response.json();
+                    currentSessionId = lastResponse.session_id;
+
+                    // Track uploaded document
+                    uploadedDocuments.push({
+                        document_id: lastResponse.document_id || `doc_${Date.now()}`,
+                        filename: file.name,
+                        chunk_count: lastResponse.document_chunks || 1
+                    });
+                }
+
+                updateDocsListUI();
+                displayResponse(lastResponse);
+
+                // Clear file input
+                fileInput.value = '';
+                document.getElementById('fileNameDisplay').textContent = 'Choose files (PDF, TXT, DOC) - Multiple allowed';
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btnText.style.display = 'inline';
+                btnLoader.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        }, true);
+    </script>
+</body>
+
+</html>

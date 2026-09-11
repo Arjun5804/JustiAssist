@@ -1,0 +1,12 @@
+act_name,section,description,limitation_period,starting_point
+Limitation Act,3,"Bar of limitation. Subject to the provisions contained in sections 4 to 24, every suit instituted, appeal preferred, and application made after the prescribed period shall be dismissed.",-,
+Limitation Act,5,"Extension of prescribed period on certain cases. Any appeal or any application... may be admitted after the prescribed period if the appellant or the applicant satisfies the court that he had sufficient cause for not preferring the appeal or making the application within such period.",-,
+Limitation Act,Schedule Art 113,"Any suit for which no period of limitation is provided elsewhere in this Schedule.",3 years,When the right to sue accrues
+Limitation Act,Schedule Art 1,"For money payable for money lent.",3 years,When the loan is made
+Limitation Act,Schedule Art 19,"For money payable for money lent.",3 years,When the loan is made
+Limitation Act,Schedule Art 24,"For money payable by the defendant to the plaintiff for money received by the defendant for the plaintiff's use.",3 years,When the money is received
+Limitation Act,Schedule Art 35,"On a bill of exchange or promissory note payable on demand and not accompanied by any writing restraining or postponing the right to sue.",3 years,The date of the bill or note
+Limitation Act,Schedule Art 54,"For specific performance of a contract.",3 years,"The date fixed for the performance, or, if no such date is fixed, when the plaintiff has notice that performance is refused"
+Limitation Act,Schedule Art 58,"To obtain any other declaration.",3 years,When the right to sue first accrues
+Limitation Act,Schedule Art 65,"For possession of immovable property or any interest therein based on title.",12 years,When the possession of the defendant becomes adverse to the plaintiff
+Limitation Act,Schedule Art 137,"Any other application for which no period of limitation is provided elsewhere in this Division.",3 years,When the right to apply accrues

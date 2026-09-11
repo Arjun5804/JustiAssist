@@ -1,0 +1,42 @@
+[
+    {
+        "question": "Can I get bail in a non-bailable offence?",
+        "answer": "Yes, bail in non-bailable offences is discretionary. Under Section 437 (Magistrate) and Section 439 (Sessions/High Court) CrPC, court may grant bail considering factors like nature of accusation, severity of punishment, danger of absconding, and tampering with evidence."
+    },
+    {
+        "question": "What is Interim Bail?",
+        "answer": "Interim bail is a temporary bail granted for a short period, either while a regular bail application is pending or for specific urgent reasons (medical, family death). It remains valid until the next hearing or confirmation of regular bail."
+    },
+    {
+        "question": "Conditions for Anticipatory Bail",
+        "answer": "Courts consider: (1) Nature and gravity of accusation, (2) Antecedents of applicant, (3) Possibility of fleeing from justice, and (4) Whether accusation is to injure/humiliate. Conditions like surrendering passport, reporting to police, and not inducing witnesses are often imposed."
+    },
+    {
+        "question": "Bail under NDPS Act Section 37",
+        "answer": "For commercial quantity offences under NDPS Act, Section 37 imposes strict twin conditions: (1) Public Prosecutor must be given opportunity to oppose, and (2) Court must be satisfied there are reasonable grounds to believe accused is not guilty and is unlikely to commit offence while on bail."
+    },
+    {
+        "question": "Bail under PMLA Section 45",
+        "answer": "Section 45 of PMLA imposes twin conditions for bail: (1) Public Prosecutor opportunity to oppose, and (2) Court satisfied there are reasonable grounds to believe accused is not guilty of money laundering and is not likely to commit any offence while on bail."
+    },
+    {
+        "question": "Cancellation of Bail",
+        "answer": "Bail once granted can be cancelled under Section 437(5) or 439(2) CrPC if the accused misuses liberty, tampers with evidence, threatens witnesses, or attempts to flee."
+    },
+    {
+        "question": "What is Default Bail?",
+        "answer": "Default bail (Statutory Bail) is an indefeasible right under Section 167(2) CrPC if the police fail to file a chargesheet within 90 days (for death/life/10+ yrs offences) or 60 days (for others)."
+    },
+    {
+        "question": "Transit Bail",
+        "answer": "Transit Bail is a form of anticipatory bail granted by a court to enable the accused to travel to the jurisdiction where the offence is registered and apply for regular bail there."
+    },
+    {
+        "question": "Is bail a fundamental right?",
+        "answer": "While not explicitly stated as a fundamental right, the Supreme Court has held (in State of Rajasthan v. Balchand) that 'Bail is the rule, jail is the exception', linking it to Article 21's protection of personal liberty."
+    },
+    {
+        "question": "Bail in 498A cases",
+        "answer": "In Section 498A IPC cases (cruelty by husband/relatives), courts often follow Arnesh Kumar guidelines, discouraging automatic arrests and favoring bail or notice under Section 41A CrPC unless specific reasons necessitate arrest."
+    }
+]

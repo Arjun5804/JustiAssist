@@ -1,0 +1,276 @@
+import './ResponseCard.css'
+
+function ResponseCard({ response }) {
+    const formatAnswer = (text) => {
+        if (!text) return ''
+        return text
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    }
+
+    const getConfidenceClass = (score) => {
+        if (score >= 0.7) return 'high'
+        if (score >= 0.4) return 'medium'
+        return 'low'
+    }
+
+    const getGroundingClass = (status) => {
+        if (status === 'pass') return 'pass'
+        if (status === 'partial') return 'partial'
+        return 'fail'
+    }
+
+    const confidencePercent = Math.round(response.confidence_score * 100)
+
+    return (
+        <div className="response-container animate-fade-in">
+            {/* Confidence Header */}
+            <div className="confidence-header glass-card">
+                <div className={`query-type-badge ${response.query_type === 'bail_related' ? 'bail' : 'legal'}`}>
+                    {response.query_type === 'bail_related' ? '🔓 Bail Query' : '📚 Legal Info'}
+                </div>
+
+                <div className="confidence-meter">
+                    <span className="confidence-label">Confidence</span>
+                    <div className="confidence-bar">
+                        <div
+                            className={`confidence-fill ${getConfidenceClass(response.confidence_score)}`}
+                            style={{ width: `${confidencePercent}%` }}
+                        />
+                    </div>
+                    <span className="confidence-value">{confidencePercent}%</span>
+                </div>
+
+                <div className={`grounding-status ${getGroundingClass(response.grounding_status)}`}>
+                    <span className="status-dot" />
+                    <span className="status-text">
+                        {response.grounding_status === 'pass' ? 'Fully Grounded' :
+                            response.grounding_status === 'partial' ? 'Partially Grounded' : 'Low Grounding'}
+                    </span>
+                </div>
+            </div>
+
+            {/* Sources Used Badge */}
+            {response.sources_used && response.sources_used.length > 0 && (
+                <div className="sources-badge">
+                    <span className="sources-label">Sources:</span>
+                    {response.sources_used.map((source, i) => (
+                        <span key={i} className={`source-tag ${source}`}>
+                            {source === 'local_vectors' && '📁 Local DB'}
+                            {source === 'indian_kanoon' && '⚖️ Indian Kanoon'}
+                            {source === 'legal_news' && '📰 News'}
+                            {source === 'firecrawl_web' && '🌐 Web Search'}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {/* CrewAI Agent Pipeline Badge (v2.0) */}
+            {response.agents_used && response.agents_used.length > 0 && (
+                <div className="agents-badge">
+                    <span className="agents-label">🤖 Agents:</span>
+                    {response.agents_used.map((agent, i) => (
+                        <span key={i} className="agent-tag">{agent}</span>
+                    ))}
+                </div>
+            )}
+
+            {/* Quality Review Badge (v2.0) */}
+            {response.quality_review && (
+                <div className={`quality-review-badge ${response.quality_review.passed ? 'passed' : 'flagged'}`}>
+                    <span className="qr-icon">
+                        {response.quality_review.passed ? '✅' : '⚠️'}
+                    </span>
+                    <span className="qr-text">
+                        {response.quality_review.passed ? 'Quality Verified' : 'Review Flagged'}
+                    </span>
+                    <span className="qr-detail">
+                        {response.quality_review.valid_citations}/{(response.quality_review.valid_citations || 0) + (response.quality_review.invalid_citations || 0)} citations verified
+                        {' · '}Grounding: {Math.round((response.quality_review.grounding_score || 0) * 100)}%
+                    </span>
+                </div>
+            )}
+
+            {/* Main Answer */}
+            <div className="answer-card glass-card">
+                <h3>📋 Answer</h3>
+                <div
+                    className="answer-content"
+                    dangerouslySetInnerHTML={{ __html: formatAnswer(response.answer) }}
+                />
+            </div>
+
+            {/* PROMINENT: Indian Kanoon Cases */}
+            {response.kanoon_cases && response.kanoon_cases.length > 0 && (
+                <div className="kanoon-cases-card glass-card highlight-card">
+                    <h3>
+                        <span className="section-icon">⚖️</span>
+                        Relevant Case Law
+                        <span className="live-badge">LIVE</span>
+                    </h3>
+                    <p className="section-subtitle">Recent judgments from Indian Kanoon</p>
+                    <div className="cases-list">
+                        {response.kanoon_cases.map((caseItem, index) => (
+                            <div key={index} className="case-item">
+                                <div className="case-header">
+                                    <span className="case-title">{caseItem.title}</span>
+                                    {caseItem.court && (
+                                        <span className="case-court">{caseItem.court}</span>
+                                    )}
+                                </div>
+                                {caseItem.citation && (
+                                    <div className="case-citation">📎 {caseItem.citation}</div>
+                                )}
+                                {caseItem.preview && (
+                                    <p className="case-preview">{caseItem.preview}...</p>
+                                )}
+                                {caseItem.date && (
+                                    <span className="case-date">{caseItem.date}</span>
+                                )}
+                                <a
+                                    href={caseItem.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="case-link"
+                                >
+                                    View Full Judgment →
+                                </a>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* PROMINENT: Legal News */}
+            {response.news_context && response.news_context.length > 0 && (
+                <div className="news-context-card glass-card highlight-card">
+                    <h3>
+                        <span className="section-icon">📰</span>
+                        Current Legal Developments
+                        <span className="live-badge">LIVE</span>
+                    </h3>
+                    <p className="section-subtitle">Recent news relevant to your query</p>
+                    <div className="news-list">
+                        {response.news_context.map((news, index) => (
+                            <div key={index} className="news-item">
+                                <div className="news-title">{news.title}</div>
+                                <div className="news-meta">
+                                    <span className="news-source">{news.source}</span>
+                                    <span className="news-date">{news.date}</span>
+                                </div>
+                                {news.url && (
+                                    <a
+                                        href={news.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="news-link"
+                                    >
+                                        Read Article →
+                                    </a>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Web Sources from Firecrawl (v2.0) */}
+            {response.web_sources && response.web_sources.length > 0 && (
+                <div className="web-sources-card glass-card">
+                    <h3>
+                        <span className="section-icon">🌐</span>
+                        Web Sources
+                        <span className="web-badge">FIRECRAWL</span>
+                    </h3>
+                    <p className="section-subtitle">Supplementary information from the web</p>
+                    {response.web_sources.map((ws, i) => (
+                        <div key={i} className="web-source-item">
+                            <span className="ws-type">{ws.type}</span>
+                            <p className="ws-preview">{ws.content_preview}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Bail Assessment (conditional) */}
+            {response.bail_assessment && (
+                <div className="bail-assessment-card glass-card">
+                    <h3>⚖️ Bail Assessment</h3>
+                    <div className="bail-summary">
+                        <div className={`likelihood-badge ${response.bail_assessment.bail_likelihood?.toLowerCase()}`}>
+                            {response.bail_assessment.bail_likelihood} Likelihood
+                        </div>
+                        {response.bail_assessment.legal_reasoning && (
+                            <div className="legal-reasoning">
+                                <div className="reasoning-item">
+                                    <strong>Status:</strong> {response.bail_assessment.legal_reasoning.bailable_status}
+                                </div>
+                                <div className="reasoning-item">
+                                    <strong>Max Punishment:</strong> {response.bail_assessment.legal_reasoning.max_punishment}
+                                </div>
+                                <div className="reasoning-item">
+                                    <strong>Severity:</strong> {response.bail_assessment.legal_reasoning.severity_score}/10
+                                </div>
+                                {response.bail_assessment.legal_reasoning.applicable_crpc && (
+                                    <div className="reasoning-item">
+                                        <strong>Provisions:</strong> {response.bail_assessment.legal_reasoning.applicable_crpc.join(', ')}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Citations */}
+            {response.citations && response.citations.length > 0 && (
+                <div className="citations-card glass-card">
+                    <h3>📖 Legal Citations</h3>
+                    <div className="citations-list">
+                        {response.citations.map((citation, index) => (
+                            <div key={index} className="citation-item">
+                                <div className="citation-header">
+                                    <span className="citation-section">{citation.section}</span>
+                                    <span className="citation-type">{citation.law_type}</span>
+                                    <span className="citation-score">
+                                        {(citation.relevance_score * 100).toFixed(0)}% match
+                                    </span>
+                                </div>
+                                <p className="citation-text">{citation.text_preview}</p>
+                                <span className="citation-source">Source: {citation.source}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Processing Details */}
+            {response.processing_info && (
+                <details className="processing-details">
+                    <summary>🔍 Processing Details</summary>
+                    <div className="processing-content">
+                        {response.fetch_times_ms && (
+                            <div className="fetch-times">
+                                <strong>Fetch Times:</strong>
+                                {Object.entries(response.fetch_times_ms).map(([source, time]) => (
+                                    <span key={source} className="fetch-time-item">
+                                        {source}: {time}ms
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                        <ul>
+                            {response.processing_info.steps?.map((step, index) => (
+                                <li key={index}>{step}</li>
+                            ))}
+                        </ul>
+                    </div>
+                </details>
+            )}
+        </div>
+    )
+}
+
+export default ResponseCard

@@ -1,0 +1,11 @@
+section,law_type,description,bailable,max_punishment_years,cognizable
+3(1)(r),SC/ST Act,"Intentional insult or intimidation with intent to humiliate a member of SC/ST in any place within public view",No,5 years,Yes
+3(1)(s),SC/ST Act,"Abuses any member of SC/ST by caste name in any place within public view",No,5 years,Yes
+3(1)(w),SC/ST Act,"Intentionally touching a woman belonging to SC/ST without her consent, using sexual acts/words",No,5 years,Yes
+3(2)(v),SC/ST Act,"Committing any offence under IPC punishable with imprisonment for 10 years or more against a person or property on ground that such person is a member of SC/ST",No,Life Imprisonment,Yes
+3(2)(va),SC/ST Act,"Committing any offence specified in Schedule against person/property knowing that such person is a member of SC/ST",No,Schedule Punishment,Yes
+4,SC/ST Act,"Punishment for neglect of duties (by public servant)",No,1 year,Yes
+14,SC/ST Act,"Special Court and Exclusive Special Court",NA,NA,NA
+14A,SC/ST Act,"Appeals (Appeal lies to High Court from any judgment/sentence/order, including bail, within 90 days)",NA,NA,NA
+18,SC/ST Act,"Section 438 of the Code not to apply to persons committing an offence under the Act (Bar on Anticipatory Bail)",NA,NA,NA
+18A,SC/ST Act,"No enquiry or approval required for arrest; Section 438 not applicable notwithstanding any court judgment/order.",NA,NA,NA

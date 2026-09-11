@@ -1,0 +1,17 @@
+act_name,section,description,bailable,punishment,cognizable
+Information Technology Act,66A,"Punishment for sending offensive messages through communication service, etc. (STRUCK DOWN by SC in Shreya Singhal case, but historically relevant)",Yes,3 years,Yes
+Information Technology Act,66C,"Punishment for identity theft",Yes,3 years,Yes
+Information Technology Act,66D,"Punishment for cheating by personation by using computer resource",Yes,3 years,Yes
+Information Technology Act,67,"Punishment for publishing or transmitting obscene material in electronic form",Yes (1st conv),3 years (1st conv); 5 years (2nd conv),Yes
+Information Technology Act,67A,"Punishment for publishing or transmitting of material containing sexually explicit act, etc., in electronic form",No (usually),5 years (1st conv); 7 years (2nd conv),Yes
+Juvenile Justice Act,12,"Bail to a person who is apparently a child alleged to be in conflict with law. Mandates bail notwithstanding anything in CrPC, unless release brings association with known criminals.",NA,NA,NA
+Juvenile Justice Act,75,"Punishment for cruelty to child",No,3 years,Yes
+Arms Act,25,"Punishment for certain offences (Possession of illegal arms)",No,"3-7 years (varies by weapon)",Yes
+Arms Act,27,"Punishment for using arms, etc.",No,"3-7 years (can be life/death for prohibited arms)",Yes
+Prevention of Corruption Act,7,"Offence relating to public servant being bribed",No,3-7 years,Yes
+Prevention of Corruption Act,13,"Criminal misconduct by a public servant (Illicit enrichment)",No,4-10 years,Yes
+Negotiable Instruments Act,138,"Dishonour of cheque for insufficiency, etc., of funds in the account",Yes,2 years or fine (twice amount),Non-Cognizable
+Negotiable Instruments Act,143A,"Power to direct interim compensation",NA,NA,NA
+Protection of Women from Domestic Violence Act,12,"Application to Magistrate for relief (Protection Orders, Residence Orders, etc.)",NA,NA,NA
+Protection of Women from Domestic Violence Act,31,"Penalty for breach of protection order by respondent",No,1 year,Yes
+Indecent Representation of Women (Prohibition) Act,3,"Prohibition of advertisements containing indecent representation of women",Yes,2 years,Yes

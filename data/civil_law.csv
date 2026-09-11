@@ -1,0 +1,17 @@
+act_name,section,description,notes
+Hindu Marriage Act,5,"Conditions for a Hindu marriage (Monogamy, Mental capacity, Age, Prohibited relationship, Sapindas)",validity
+Hindu Marriage Act,9,"Restitution of conjugal rights. When either the husband or the wife has, without reasonable excuse, withdrawn from the society of the other, the aggrieved party may apply for restitution.",remedy
+Hindu Marriage Act,13,"Divorce. Grounds: Adultery, Cruelty, Desertion, Conversion, Mental Disorder, Leprosy, Venereal Disease, Renunciation, Presumed Dead.",divorce
+Hindu Marriage Act,13B,"Divorce by mutual consent. Both parties living separately for 1 year + unable to live together + mutually agreed to dissolve.",divorce
+Hindu Marriage Act,24,"Maintenance pendente lite and expenses of proceedings. Relief for wife/husband who has no independent income sufficient for support.",maintenance
+Hindu Marriage Act,25,"Permanent alimony and maintenance. Court may order gross sum or monthly payment based on income and property.",maintenance
+Special Marriage Act,4,"Conditions relating to solemnization of special marriages (inter-faith/civil marriage).",validity
+Special Marriage Act,27,"Divorce grounds under Special Marriage Act (similar to HMA).",divorce
+Indian Succession Act,2,"Definitions (Will, Codicil, Executor, Administrator).",definitions
+Indian Succession Act,63,"Execution of unprivileged Wills. Testator must sign, attested by two or more witnesses.",wills
+Indian Succession Act,213,"Right as executor or legatee when established. Probate requirement for wills of Hindus/Buddhists/Sikhs/Jains in presidency towns.",probate
+Hindu Succession Act,6,"Devolution of interest in coparcenary property. Daughters have equal rights as sons in coparcenary property (2005 Amendment).",inheritance
+Hindu Succession Act,8,"General rules of succession in the case of males. Class I heirs (Widow, Mother, Son, Daughter) take simultaneously.",inheritance
+Hindu Succession Act,15,"General rules of succession in the case of female Hindus.",inheritance
+Guardians and Wards Act,7,"Power of the Court to make order as to guardianship.",custody
+Guardians and Wards Act,17,"Matters to be considered by the Court in appointing guardian (Welfare of minor is paramount).",custody

@@ -1,0 +1,18 @@
+section,law_type,description,bailable,max_punishment_years,cognizable
+8,NDPS,"Prohibition of certain operations (cultivate, produce, manufacture, possess, sell, purchase, transport, ware-house, use, consume, import inter-State, export inter-State, import into India, export from India or tranship any narcotic drug or psychotropic substance)",No,Varies,Yes
+15,NDPS,"Punishment for contravention in relation to poppy straw",No,"Small qty: 1 year; Commercial qty: 20 years",Yes
+17,NDPS,"Punishment for contravention in relation to prepared opium",No,"Small qty: 1 year; Commercial qty: 20 years",Yes
+18,NDPS,"Punishment for contravention in relation to opium poppy and opium",No,"Small qty: 1 year; Commercial qty: 20 years",Yes
+20,NDPS,"Punishment for contravention in relation to cannabis plant and cannabis (Ganja/Charas)",No,"Small qty: 1 year; Commercial qty: 20 years. (Consumption: 1 year/6 months)",Yes
+21,NDPS,"Punishment for contravention in relation to manufactured drugs and preparations (Heroin, Smack, etc.)",No,"Small qty: 1 year; Commercial qty: 20 years",Yes
+22,NDPS,"Punishment for contravention in relation to psychotropic substances (MDMA, LSD, etc.)",No,"Small qty: 1 year; Commercial qty: 20 years",Yes
+25,NDPS,"Punishment for allowing premises, etc., to be used for commission of an offence",No,"Same as for offence",Yes
+27,NDPS,"Punishment for consumption of any narcotic drug or psychotropic substance",Yes/No,"1 year (Cocaine/Morphine/Heroin); 6 months (others)",Cognizable
+27A,NDPS,"Punishment for financing illicit traffic and harbouring offenders",No,"20 years (Min 10 years)",Yes
+29,NDPS,"Punishment for abetment and criminal conspiracy",No,"Same as for offence",Yes
+31A,NDPS,"Death penalty for certain offences after previous conviction",No,Death,Yes
+35,NDPS,"Presumption of culpable mental state",NA,NA,NA
+37,NDPS,"Offences to be cognizable and non-bailable. Strict bail conditions: (i) Public Prosecutor given opportunity to oppose (ii) Court satisfied reasonable grounds exist that accused is not guilty and unlikely to commit offence while on bail.",NA,NA,NA
+42,NDPS,"Power of entry, search, seizure and arrest without warrant or authorisation",NA,NA,NA
+50,NDPS,"Conditions under which search of persons shall be conducted (Right to be searched before Gazetted Officer/Magistrate)",NA,NA,NA
+67,NDPS,"Power to call for information, etc. (Confession to NDPS officer - now inadmissible per Tofan Singh judgment)",NA,NA,NA

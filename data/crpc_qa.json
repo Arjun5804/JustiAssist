@@ -1,0 +1,42 @@
+[
+    {
+        "question": "When can police arrest without warrant?",
+        "answer": "Under Section 41 CrPC, police can arrest without warrant if a cognizable offence is committed in their presence, or based on credible information of a cognizable offence punishable with imprisonment up to 7 years (subject to necessity) or more than 7 years."
+    },
+    {
+        "question": "What are the rights of an arrested person?",
+        "answer": "Key rights include: Right to know grounds of arrest (Section 50), Right to bail information for bailable offences (Section 50), Right to consult a lawyer (Section 41D), Right to be produced before Magistrate within 24 hours (Section 57), and Right to medical examination (Section 54)."
+    },
+    {
+        "question": "What is Anticipatory Bail?",
+        "answer": "Anticipatory bail is a direction under Section 438 CrPC to release a person on bail in the event of their arrest for a non-bailable offence. It prevents harassment and unnecessary detention."
+    },
+    {
+        "question": "Difference between bailable and non-bailable offence",
+        "answer": "In bailable offences (Section 436 CrPC), bail is a matter of right and police/court must grant it. In non-bailable offences (Section 437/439 CrPC), bail is discretionary and decided by the Court based on facts and circumstances."
+    },
+    {
+        "question": "Procedure for FIR registration",
+        "answer": "Section 154 CrPC mandates that information relating to the commission of a cognizable offence must be recorded by the officer in charge of a police station as a First Information Report (FIR). A copy must be given to the informant free of cost."
+    },
+    {
+        "question": "What is a Zero FIR?",
+        "answer": "A Zero FIR can be registered in any police station irrespective of jurisdiction when a cognizable offence is reported. It is then transferred to the jurisdictional police station for investigation. Though not explicitly mentioned in CrPC, it is enforced via Ministry of Home Affairs advisories and court judgments."
+    },
+    {
+        "question": "Can a woman be arrested at night?",
+        "answer": "Section 46(4) CrPC prohibits the arrest of a woman after sunset and before sunrise, except in exceptional circumstances where a woman police officer obtains prior permission from a Judicial Magistrate First Class."
+    },
+    {
+        "question": "What happens if investigation is not completed in 24 hours?",
+        "answer": "Under Section 57 CrPC, police cannot detain a person beyond 24 hours. They must produce the accused before the nearest Magistrate, who may authorize further detention (remand) under Section 167 CrPC."
+    },
+    {
+        "question": "Powers of High Court under Section 482",
+        "answer": "Section 482 CrPC saves the inherent powers of the High Court to make such orders as may be necessary to give effect to any order under the Code, or to prevent abuse of the process of any Court, or otherwise to secure the ends of justice (e.g., quashing FIRs)."
+    },
+    {
+        "question": "What is a Charge Sheet?",
+        "answer": "A Charge Sheet is the final report filed by the police under Section 173 CrPC upon completion of investigation, containing details of the offence, accused, evidence, and witnesses."
+    }
+]

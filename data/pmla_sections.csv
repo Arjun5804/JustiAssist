@@ -1,0 +1,12 @@
+section,law_type,description,bailable,max_punishment_years,cognizable
+3,PMLA,Offence of money-laundering (Whosoever directly or indirectly attempts to indulge, knowingly assists, is involved in... proceeds of crime... claiming it as untainted property),No,7 years,Yes
+4,PMLA,Punishment for money-laundering,No,Imprisonment for 3-7 years (up to 10 years if Narcotic related) and fine,Yes
+5,PMLA,Attachment of property involved in money-laundering,NA,NA,NA
+8,PMLA,Adjudication,NA,NA,NA
+17,PMLA,Search and seizure,NA,NA,NA
+19,PMLA,Power to arrest (Director/Deputy/Assistant Director may arrest if reason to believe person guilty),NA,NA,NA
+24,PMLA,Burden of proof (Presumption that proceeds of crime are involved in money-laundering),NA,NA,NA
+44,PMLA,Offences triable by Special Courts,NA,NA,NA
+45,PMLA,Offences to be cognizable and non-bailable. TWIN CONDITIONS FOR BAIL: (i) Public Prosecutor opportunity to oppose; (ii) Court satisfied reasonable grounds exist to believe accused is not guilty and is not likely to commit offence while on bail.,NA,NA,NA
+50,PMLA,Powers of authorities regarding summons, production of documents and to give evidence,NA,NA,NA
+63,PMLA,Punishment for false information or failure to give information,No,2 years,Non-cognizable

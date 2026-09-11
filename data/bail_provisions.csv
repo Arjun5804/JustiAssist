@@ -1,0 +1,65 @@
+section,law_type,bailable,max_punishment_years,cognizable,compoundable,description,crpc_section,bnss_equivalent
+302,IPC,No,Death/Life,Yes,No,Murder,437,483
+304,IPC,No,Life/10,Yes,No,Culpable homicide not amounting to murder,437,483
+304A,IPC,Yes,2,Yes,Yes,Death by negligence,436,482
+304B,IPC,No,7-Life,Yes,No,Dowry death,437,483
+306,IPC,No,10,Yes,No,Abetment of suicide,437,483
+307,IPC,No,Life,Yes,No,Attempt to murder,437,483
+308,IPC,Yes,3,Yes,No,Attempt to commit culpable homicide,436,482
+323,IPC,Yes,1,No,Yes,Voluntarily causing hurt,436,482
+324,IPC,Yes,3,Yes,No,Voluntarily causing hurt by dangerous weapons,436,482
+325,IPC,Yes,7,Yes,No,Voluntarily causing grievous hurt,436,482
+326,IPC,No,Life/10,Yes,No,Voluntarily causing grievous hurt by dangerous weapons,437,483
+354,IPC,Yes,2,Yes,No,Assault or criminal force to woman with intent to outrage modesty,436,482
+354A,IPC,Yes,3,Yes,No,Sexual harassment,436,482
+354B,IPC,No,3-7,Yes,No,Assault with intent to disrobe,437,483
+354C,IPC,No,3-7,Yes,No,Voyeurism,437,483
+354D,IPC,No,5,Yes,No,Stalking,437,483
+363,IPC,No,7,Yes,No,Kidnapping,437,483
+363A,IPC,No,10,Yes,No,Kidnapping for begging,437,483
+364,IPC,No,Life/10,Yes,No,Kidnapping for murder,437,483
+364A,IPC,No,Death/Life,Yes,No,Kidnapping for ransom,437,483
+365,IPC,No,7,Yes,No,Kidnapping with intent to wrongfully confine,437,483
+366,IPC,No,10,Yes,No,Kidnapping woman to compel marriage,437,483
+366A,IPC,No,10,Yes,No,Procuration of minor girl,437,483
+376,IPC,No,10-Life,Yes,No,Rape,437,483
+376A,IPC,No,20-Life/Death,Yes,No,Rape causing death,437,483
+376B,IPC,No,2-7,Yes,No,Sexual intercourse by husband on wife during separation,437,483
+376C,IPC,No,5-10,Yes,No,Sexual intercourse by person in authority,437,483
+376D,IPC,No,20-Life,Yes,No,Gang rape,437,483
+376DA,IPC,No,20-Life/Death,Yes,No,Gang rape on woman under 16,437,483
+376DB,IPC,No,Life/Death,Yes,No,Gang rape on woman under 12,437,483
+377,IPC,No,Life/10,Yes,No,Unnatural offences,437,483
+379,IPC,Yes,3,No,No,Theft,436,482
+380,IPC,Yes,7,Yes,No,Theft in dwelling house,436,482
+381,IPC,Yes,7,Yes,No,Theft by clerk or servant,436,482
+384,IPC,Yes,3,Yes,No,Extortion,436,482
+386,IPC,No,10,Yes,No,Extortion by putting fear of death,437,483
+392,IPC,No,10,Yes,No,Robbery,437,483
+394,IPC,No,Life,Yes,No,Voluntarily causing hurt in committing robbery,437,483
+395,IPC,No,Life,Yes,No,Dacoity,437,483
+396,IPC,No,Death/Life,Yes,No,Dacoity with murder,437,483
+397,IPC,No,7-min,Yes,No,Robbery or dacoity with attempt to cause death,437,483
+399,IPC,No,7,Yes,No,Making preparation to commit dacoity,437,483
+406,IPC,Yes,3,No,Yes,Criminal breach of trust,436,482
+408,IPC,Yes,7,No,Yes,Criminal breach of trust by clerk,436,482
+409,IPC,No,Life/10,No,No,Criminal breach of trust by public servant,437,483
+411,IPC,Yes,3,Yes,No,Dishonestly receiving stolen property,436,482
+413,IPC,No,7,Yes,No,Habitually dealing in stolen property,437,483
+420,IPC,Yes,7,No,No,Cheating and dishonestly inducing delivery,436,482
+436,IPC,No,Life,Yes,No,Mischief by fire or explosive with intent to destroy house,437,483
+449,IPC,No,Life,Yes,No,House-trespass to commit offence punishable with death,437,483
+452,IPC,Yes,7,Yes,No,House-trespass after preparation to hurt,436,482
+457,IPC,Yes,5,Yes,No,Lurking house-trespass by night,436,482
+489A,IPC,No,Life,Yes,No,Counterfeiting currency notes,437,483
+489B,IPC,No,Life,Yes,No,Using forged currency notes,437,483
+489C,IPC,No,7,Yes,No,Possession of forged currency notes,437,483
+498A,IPC,Yes,3,Yes,No,Cruelty by husband or relatives,436,482
+506,IPC,Yes,2,No,Yes,Criminal intimidation,436,482
+509,IPC,Yes,3,Yes,No,Word gesture or act to insult modesty of woman,436,482
+120B,IPC,No,Varies,Yes,No,Criminal conspiracy,437,483
+124A,IPC,No,Life,Yes,No,Sedition,437,483
+153A,IPC,Yes,3,Yes,No,Promoting enmity between groups,436,482
+295A,IPC,Yes,3,Yes,No,Deliberate acts to outrage religious feelings,436,482
+297,IPC,Yes,1,No,Yes,Trespassing on burial places,436,482
+299,IPC,No,Life/10,Yes,No,Culpable homicide,437,483

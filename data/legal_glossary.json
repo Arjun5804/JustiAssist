@@ -1,0 +1,110 @@
+[
+    {
+        "term": "Amicus Curiae",
+        "definition": "Literal meaning 'Friend of the Court'. A person or organization who is not a party to the litigation but is invited by the court to advise on legal matters."
+    },
+    {
+        "term": "Suo Moto",
+        "definition": "Action taken by a court on its own motion, without a formal complaint or petition from any party."
+    },
+    {
+        "term": "Habeas Corpus",
+        "definition": "A writ (court order) requiring a person under arrest to be brought before a judge or into court, especially to secure the person's release unless lawful grounds are shown for their detention."
+    },
+    {
+        "term": "Res Judicata",
+        "definition": "A matter that has been adjudicated by a competent court and therefore may not be pursued further by the same parties."
+    },
+    {
+        "term": "Obiter Dicta",
+        "definition": "A judge's expression of opinion uttered in court or in a written judgment, but not essential to the decision and therefore not legally binding as a precedent."
+    },
+    {
+        "term": "Ratio Decidendi",
+        "definition": "The legal principle or rationale on which a judicial decision is based. This is the binding part of the judgment."
+    },
+    {
+        "term": "Vakalatnama",
+        "definition": "A document by which a client authorizes an advocate to represent them in a court case."
+    },
+    {
+        "term": "Caveat",
+        "definition": "A notice filed in court by a party preventing the court from issuing an order or judgment against them without giving them a hearing."
+    },
+    {
+        "term": "FIR (First Information Report)",
+        "definition": "A written document prepared by police when they receive information about the commission of a cognizable offence."
+    },
+    {
+        "term": "Cognizable Offence",
+        "definition": "An offence for which police can arrest without a warrant and start investigation without court permission (e.g., murder, rape)."
+    },
+    {
+        "term": "Non-Cognizable Offence",
+        "definition": "An offence for which police have no authority to arrest without a warrant and cannot investigate without a Magistrate's permission (e.g., simple hurt, defamation)."
+    },
+    {
+        "term": "Bailable Offence",
+        "definition": "An offence where bail is a matter of right. The police officer or court must grant bail if the accused is prepared to give bail."
+    },
+    {
+        "term": "Non-Bailable Offence",
+        "definition": "An offence where bail is not a right but a discretion of the court. The accused can be released on bail only by the court's order."
+    },
+    {
+        "term": "Anticipatory Bail",
+        "definition": "Bail granted by a Sessions Court or High Court to a person apprehending arrest. It becomes effective at the moment of arrest."
+    },
+    {
+        "term": "Default Bail (Statutory Bail)",
+        "definition": "Right to bail that accrues to an accused if the investigation agency fails to file the charge sheet within the prescribed period (60 or 90 days)."
+    },
+    {
+        "term": "Interim Bail",
+        "definition": "Temporary bail granted for a short period until the final disposal of the bail application."
+    },
+    {
+        "term": "Transit Bail",
+        "definition": "Bail granted to enable an accused to travel to a different jurisdiction to seek regular bail."
+    },
+    {
+        "term": "Parole",
+        "definition": "Temporary release of a prisoner who agrees to certain conditions before the completion of the maximum sentence period."
+    },
+    {
+        "term": "Furlough",
+        "definition": "Leave granted to a prisoner from jail for a specified period, typically as a reward for good conduct, without any specific reason required."
+    },
+    {
+        "term": "Charge Sheet",
+        "definition": "Final report prepared by the police under Section 173 CrPC proving the accusation against the accused."
+    },
+    {
+        "term": "Acquittal",
+        "definition": "A judgment that a person is not guilty of the crime with which they have been charged."
+    },
+    {
+        "term": "Conviction",
+        "definition": "A formal declaration that someone is guilty of a criminal offence, made by the verdict of a jury or the decision of a judge in a court of law."
+    },
+    {
+        "term": "Surety",
+        "definition": "A person who takes responsibility for another's performance of an undertaking, for example their appearing in court or paying a debt."
+    },
+    {
+        "term": "Approver",
+        "definition": "An accomplice who turns witness against the other accused in return for a pardon."
+    },
+    {
+        "term": "Hostile Witness",
+        "definition": "A witness who testifies against the party who called them to testify."
+    },
+    {
+        "term": "Lok Adalat",
+        "definition": "Alternative dispute resolution mechanism in India where disputes pending in courts or at pre-litigation stage are settled amicably."
+    },
+    {
+        "term": "PIL (Public Interest Litigation)",
+        "definition": "Litigation introduced in a court of law not by the aggrieved party but by the court itself or by any other private party in the interest of the public."
+    }
+]

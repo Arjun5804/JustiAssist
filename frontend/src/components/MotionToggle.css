@@ -1,0 +1,197 @@
+/* Animated Motion Toggle Switch */
+
+.motion-toggle {
+    position: relative;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: fit-content;
+}
+
+.motion-toggle-input {
+    opacity: 0;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    z-index: 2;
+    margin: 0;
+}
+
+.motion-toggle-icon {
+    position: relative;
+    width: 2.6em;
+    height: 2.6em;
+    color: var(--text-muted, #888);
+    transition: color 0.3s ease;
+}
+
+.motion-toggle:hover .motion-toggle-icon {
+    color: var(--text-secondary, #aaa);
+}
+
+.motion-toggle-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.motion-toggle-label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-muted, #888);
+    white-space: nowrap;
+    user-select: none;
+    transition: color 0.3s ease;
+}
+
+.motion-toggle:hover .motion-toggle-label {
+    color: var(--text-secondary, #aaa);
+}
+
+/* SVG line hidden by default */
+.motion-toggle-icon .line {
+    transform: scaleX(0);
+}
+
+/* ON state (unchecked = motion ON) — ball bounces back */
+.motion-toggle-input:not(:checked)+.motion-toggle-icon .ballTrace {
+    animation:
+        ballTrace_motionOffA 0.3s ease 0s 1 forwards,
+        ballTrace_motionOffB 0.1s steps(2, end) calc(0.32s + var(--_appearOffset, 0s)) 1 forwards;
+}
+
+.motion-toggle-input:not(:checked)+.motion-toggle-icon .ball {
+    animation:
+        ball_motionOnA 0.3s ease 0s 1 forwards,
+        ball_motionOnB 0.4s cubic-bezier(0.165, 0.84, 0.45, 1.11) 0.3s 1 forwards;
+}
+
+/* OFF state (checked = motion OFF) — ball rolls to center + line appears */
+.motion-toggle-input:checked+.motion-toggle-icon circle {
+    animation: ball_motionOff 0.9s linear 0s 1 forwards;
+}
+
+.motion-toggle-input:checked+.motion-toggle-icon .line {
+    animation: line_motionOff 0.32s cubic-bezier(0.075, 0.82, 0.165, 1) 0.47s 1 forwards;
+}
+
+/* Active state indicator */
+.motion-toggle-input:checked~.motion-toggle-label {
+    color: var(--text-primary, #fff);
+}
+
+/* ====== Keyframes ====== */
+
+@keyframes ball_motionOff {
+    0% {
+        transform: translateX(0px);
+    }
+
+    6.66% {
+        transform: translateX(calc(var(--_toCenterXOffset) * 0.45));
+    }
+
+    13.33% {
+        transform: translateX(calc(var(--_toCenterXOffset) * 0.77));
+    }
+
+    20% {
+        transform: translateX(calc(var(--_toCenterXOffset) * 0.9));
+    }
+
+    26.66% {
+        transform: translateX(calc(var(--_toCenterXOffset) * 0.94));
+    }
+
+    33.33% {
+        transform: translate(calc(var(--_toCenterXOffset) * 0.965 + 1px), 2px);
+    }
+
+    35% {
+        transform: translate(calc(var(--_toCenterXOffset) * 0.988), 1px);
+    }
+
+    37% {
+        transform: translate(calc(var(--_toCenterXOffset) * 0.991 + 1px), -1px);
+    }
+
+    39% {
+        transform: translate(calc(var(--_toCenterXOffset) * 0.995 - 1px), -2px);
+    }
+
+    41% {
+        transform: translate(calc(var(--_toCenterXOffset) * 0.999 + 1px), -1px);
+    }
+
+    43% {
+        transform: translate(calc(var(--_toCenterXOffset) * 0.75), 1px);
+    }
+
+    45% {
+        transform: translate(calc(var(--_toCenterXOffset) * 0.5), 0px);
+    }
+
+    100% {
+        transform: translate(calc(var(--_toCenterXOffset) * 0.5), 0px);
+    }
+}
+
+@keyframes line_motionOff {
+    0% {
+        transform: scaleY(0);
+    }
+
+    100% {
+        transform: scaleY(1);
+    }
+}
+
+@keyframes ball_motionOnA {
+    0% {
+        transform: translate(calc(var(--_toCenterXOffset) * 0.5), 0px);
+    }
+
+    100% {
+        transform: translate(calc(var(--_toCenterXOffset) - 5.67px), 0px);
+    }
+}
+
+@keyframes ball_motionOnB {
+    0% {
+        transform: translate(calc(var(--_toCenterXOffset) - 5.67px), 0px);
+    }
+
+    100% {
+        transform: translate(0px, 0px);
+    }
+}
+
+@keyframes ballTrace_motionOffA {
+    0% {
+        opacity: 1;
+        transform: translate(calc(var(--_toCenterXOffset) * 0.5), 0px);
+    }
+
+    99.9% {
+        opacity: 1;
+        transform: translate(calc(var(--_toCenterXOffset) - 5.67px), 0px);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(calc(var(--_toCenterXOffset) - 5.67px), 0px);
+    }
+}
+
+@keyframes ballTrace_motionOffB {
+    0% {
+        opacity: 0;
+        transform: translate(0px, 0px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translate(0px, 0px);
+    }
+}
