@@ -1,3 +1,20 @@
+
+from audit_logger import audit_logger
+from metrics import metrics
+from config import GROQ_MODEL
+from reranker import SearchResult as RerankSearchResult
+from llm_provider import LLMProvider
+
+
+import asyncio
+from datetime import datetime
+from document_session import session_manager
+from config import TOP_K_STATUTORY, TOP_K_CASE_LAW, AnswerMode, DEFAULT_ANSWER_MODE, RETRIEVAL_CONFIDENCE_THRESHOLD, INSUFFICIENT_CONTEXT_RESPONSE
+from agents.query_classifier import QueryType
+from prompts.templates import build_prompt_with_documents, build_legal_prompt, build_bail_prompt, format_document_citation
+from llm_provider import call_llm
+from services.news_scraper import get_news_scraper
+
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
 from typing import Optional, List, Dict, Any
 import uuid
@@ -50,6 +67,48 @@ class QueryResponse(BaseModel):
     fetch_times_ms: dict = {}
 
 
+async def generate_response(
+    prompt: str,
+    retrieval_scores: list = None,
+    force_grounded: bool = True
+) -> tuple:
+    if deps.llm_provider is None:
+        deps.llm_provider = LLMProvider()
+    
+    answer_mode = DEFAULT_ANSWER_MODE
+    if retrieval_scores:
+        avg_score = sum(retrieval_scores) / len(retrieval_scores) if retrieval_scores else 0
+        if avg_score < RETRIEVAL_CONFIDENCE_THRESHOLD:
+            answer_mode = AnswerMode.FALLBACK
+    elif retrieval_scores is not None and len(retrieval_scores) == 0:
+        answer_mode = AnswerMode.FALLBACK
+    
+    if force_grounded:
+        answer_mode = AnswerMode.GROUNDED
+    
+    try:
+        response, mode, metadata = await deps.llm_provider.generate(
+            prompt,
+            answer_mode=answer_mode,
+            retrieval_scores=retrieval_scores
+        )
+        return response, mode, metadata
+    except Exception as e:
+        response = await call_llm(prompt, answer_mode, retrieval_scores)
+        return response, answer_mode, {"fallback": True}
+
+def format_citations(search_results: list) -> List[Citation]:
+    citations = []
+    for result in search_results:
+        citations.append(Citation(
+            section=result.section_number,
+            law_type=result.law_type,
+            text_preview=result.text[:200] + "..." if len(result.text) > 200 else result.text,
+            source=result.source_dataset,
+            relevance_score=round(result.score, 3)
+        ))
+    return citations
+
 router = APIRouter()
 
 @router.post("/api/v2/query")
@@ -101,7 +160,7 @@ async def process_query_v2(
     if request.session_id:
         session = session_manager.get_session(request.session_id)
         if session and session.documents:
-            from agents.deps.query_reformulator import QueryReformulator
+            from agents.query_reformulator import QueryReformulator
             reformulator = QueryReformulator()
             reformulated = reformulator.reformulate(query)
             doc_results = session.search(reformulated.enhanced_query, top_k=5)
@@ -190,7 +249,7 @@ async def query_stream_v2(
             if session_id:
                 session = session_manager.get_session(session_id)
                 if session and session.documents:
-                    from agents.deps.query_reformulator import QueryReformulator
+                    from agents.query_reformulator import QueryReformulator
                     reformulator = QueryReformulator()
                     reformulated = reformulator.reformulate(query)
                     doc_results = session.search(reformulated.enhanced_query, top_k=5)

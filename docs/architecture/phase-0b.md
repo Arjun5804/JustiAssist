@@ -27,4 +27,9 @@ Extract route handlers from the 2,547-line `app.py` monolith into a modular `api
 ## Result
 - `app.py` has been reduced from 2,547 lines to ~220 lines.
 - It acts strictly as a composition root: running the lifespan, configuring FastAPI middleware, and registering the `api/` routers.
-- The application starts cleanly and passes the verification criterion: zero new regressions.
+- The application starts cleanly. A dedicated repair pass confirmed that:
+   - All modules (`api.auth`, `api.query`, `api.features`, `api.documents`, `api.admin`, etc.) import successfully without undefined names or `NameError` exceptions.
+   - Pydantic models originally inside `app.py` (like `CasePredictionRequest`) were safely migrated to `api/features.py`.
+   - Helper functions (`generate_response`, `format_citations`, `extract_text_from_file`) were moved strictly to the domains they serve (`api/query.py` and `api/documents.py`).
+   - `deps.vector_store` globals are accessed properly across all routers.
+- The test suite verified exact baseline preservation: 1 passing (`test_section_boost.py`) and 3 existing `pytest-asyncio` related failures. No new regressions were introduced by the refactoring.

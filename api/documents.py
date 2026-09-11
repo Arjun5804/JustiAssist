@@ -1,7 +1,55 @@
+
+from pathlib import Path
+import tempfile
+from agents.query_classifier import QueryType
+from config import TOP_K_STATUTORY, TOP_K_BAIL
+from prompts.templates import build_prompt_with_documents, format_document_citation
+from llm_provider import call_llm
+from api.query import QueryRequest
+
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
 from typing import Optional, List, Dict, Any
 from core.dependencies import deps
 from document_session import session_manager
+
+def extract_text_from_file(file_path: Path, filename: str) -> str:
+    """Extract text from uploaded file"""
+    content = ""
+    
+    if filename.endswith('.txt'):
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+    elif filename.endswith('.pdf'):
+        try:
+            import PyPDF2
+            with open(file_path, 'rb') as f:
+                reader = PyPDF2.PdfReader(f)
+                for page in reader.pages:
+                    content += page.extract_text() + "\n"
+        except ImportError:
+            # Fallback if PyPDF2 not installed
+            content = "[PDF extraction requires PyPDF2. Install with: pip install PyPDF2]"
+        except Exception as e:
+            content = f"[Error extracting PDF: {str(e)}]"
+    elif filename.endswith('.docx'):
+        try:
+            from docx import Document
+            doc = Document(str(file_path))
+            paragraphs = [para.text for para in doc.paragraphs if para.text.strip()]
+            content = "\n".join(paragraphs)
+        except ImportError:
+            content = "[DOCX extraction requires python-docx. Install with: pip install python-docx]"
+        except Exception as e:
+            content = f"[Error extracting DOCX: {str(e)}]"
+    else:
+        # Try reading as text
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+        except:
+            content = "[Unable to extract text from this file format]"
+    
+    return content
 
 router = APIRouter()
 

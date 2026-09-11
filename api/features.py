@@ -2,6 +2,51 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from typing import Optional, List, Dict, Any
 from core.dependencies import deps
 from pydantic import BaseModel, Field
+from llm_provider import call_llm
+from datetime import datetime
+from prompts.templates import build_generation_prompt
+
+class CasePredictionRequest(BaseModel):
+    """Request model for AI case outcome prediction"""
+    case_type: str = Field(..., description="criminal, civil, constitutional, family, property")
+    sections_involved: List[str] = Field(default_factory=list)
+    case_facts: str = Field(..., min_length=20)
+    court_level: str = Field(default="sessions", description="district, sessions, high_court, supreme_court")
+    jurisdiction: str = Field(default="Delhi")
+    prior_proceedings: Optional[str] = None
+    client_role: str = Field(default="accused", description="petitioner, respondent, accused, complainant")
+
+
+
+class CounterArgumentRequest(BaseModel):
+    """Request model for counter-argument generation"""
+    legal_argument: str = Field(..., min_length=20, description="The legal argument to counter")
+    case_type: str = Field(default="criminal", description="criminal, civil, constitutional, family, property")
+    sections_involved: List[str] = Field(default_factory=list)
+    client_role: str = Field(default="respondent", description="petitioner, respondent, accused, complainant")
+    jurisdiction: str = Field(default="Delhi")
+    focus_areas: List[str] = Field(default_factory=list, description="procedural, substantive, evidentiary, constitutional")
+
+
+
+class QuizRequest(BaseModel):
+    topic: str = Field(..., description="e.g. Constitutional Law, IPC, CrPC, Evidence Act, Contract Law")
+    difficulty: str = Field(default="medium", description="easy, medium, hard")
+    num_questions: int = Field(default=5, ge=1, le=10)
+    exam_type: str = Field(default="CLAT", description="CLAT, AILET, JUDICIARY, BAR")
+
+
+
+class MootCourtRequest(BaseModel):
+    case_scenario: str = Field(..., min_length=20)
+    user_role: str = Field(default="petitioner", description="petitioner or respondent")
+    user_argument: str = Field(..., min_length=10)
+    court_level: str = Field(default="High Court")
+    round_number: int = Field(default=1)
+    history: List[dict] = Field(default_factory=list, description="Previous argument exchanges")
+
+
+
 
 router = APIRouter()
 

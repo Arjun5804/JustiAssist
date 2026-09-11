@@ -205,47 +205,9 @@ class QueryResponse(BaseModel):
     sources_used: List[str] = []
     fetch_times_ms: dict = {}
 
-async def generate_response(
-    prompt: str,
-    retrieval_scores: list = None,
-    force_grounded: bool = True
-) -> tuple:
-    if deps.llm_provider is None:
-        deps.llm_provider = LLMProvider()
-    
-    answer_mode = DEFAULT_ANSWER_MODE
-    if retrieval_scores:
-        avg_score = sum(retrieval_scores) / len(retrieval_scores) if retrieval_scores else 0
-        if avg_score < RETRIEVAL_CONFIDENCE_THRESHOLD:
-            answer_mode = AnswerMode.FALLBACK
-    elif retrieval_scores is not None and len(retrieval_scores) == 0:
-        answer_mode = AnswerMode.FALLBACK
-    
-    if force_grounded:
-        answer_mode = AnswerMode.GROUNDED
-    
-    try:
-        response, mode, metadata = await deps.llm_provider.generate(
-            prompt,
-            answer_mode=answer_mode,
-            retrieval_scores=retrieval_scores
-        )
-        return response, mode, metadata
-    except Exception as e:
-        response = await call_llm(prompt, answer_mode, retrieval_scores)
-        return response, answer_mode, {"fallback": True}
 
-def format_citations(search_results: list) -> List[Citation]:
-    citations = []
-    for result in search_results:
-        citations.append(Citation(
-            section=result.section_number,
-            law_type=result.law_type,
-            text_preview=result.text[:200] + "..." if len(result.text) > 200 else result.text,
-            source=result.source_dataset,
-            relevance_score=round(result.score, 3)
-        ))
-    return citations
+
+
 
 # ==================== API Routers ====================
 

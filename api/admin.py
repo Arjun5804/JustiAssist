@@ -42,7 +42,7 @@ async def build_indices():
     """Trigger index building (admin endpoint)"""
 
     try:
-        from deps.vector_store import build_indices as _build_indices
+        from vector_store import build_indices as _build_indices
         deps.vector_store = _build_indices()
         return {"status": "success", "message": "Indices built successfully"}
     except Exception as e:
