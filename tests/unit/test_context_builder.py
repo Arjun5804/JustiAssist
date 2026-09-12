@@ -22,7 +22,7 @@ def test_context_builder_grouping():
         MockResult("Other", "SC_123", "Supreme Court case", "sc.csv", "case_law", 0.8, {})
     ]
     
-    context = builder.build_structured_context(statutory_results=statutory, case_law_results=case_law)
+    context, mapping = builder.build_structured_context(statutory_results=statutory, case_law_results=case_law)
     
     assert "STATUTORY PROVISIONS: IPC" in context
     assert "CASE LAW PRECEDENTS: Supreme Court" in context
@@ -37,7 +37,7 @@ def test_context_builder_contradictions():
         MockResult("IPC", "IPC_302", "Punished with 14 years", "ipc.csv", "statutory", 0.8, {})
     ]
     
-    context = builder.build_structured_context(statutory_results=statutory)
+    context, mapping = builder.build_structured_context(statutory_results=statutory)
     
     assert "CRITICAL CONTRADICTION WARNINGS" in context
     assert "Conflicting punishment terms" in context
@@ -45,5 +45,5 @@ def test_context_builder_contradictions():
 def test_context_builder_empty():
     builder = ContextBuilder()
     
-    context = builder.build_structured_context([], [])
+    context, mapping = builder.build_structured_context([], [])
     assert "No relevant legal context found." in context

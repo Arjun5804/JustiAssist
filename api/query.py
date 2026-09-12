@@ -337,16 +337,23 @@ async def process_query(request: QueryRequest):
             extracted_law_types=reformulated.extracted_law_types,
             session_id=request.session_id
         )
-        session_documents = evidence.session_documents
-        statutory_results = evidence.statutory_results
-        bail_results = evidence.case_law_results
+        
+        # VALIDATE EVIDENCE
+        from retrieval.evidence import EvidenceValidator
+        validator = EvidenceValidator()
+        validated_evidence = validator.validate(evidence)
+        
+        session_documents = validated_evidence.session_documents
+        statutory_results = validated_evidence.statutory_results
+        bail_results = validated_evidence.case_law_results
         
         if session_documents:
             processing_info["steps"].append(f"✓ Retrieved {len(session_documents)} chunks from uploaded documents")
             print(f"[SESSION DOCS] Found {len(session_documents)} document chunks for session {request.session_id}")
             
         if statutory_results:
-            processing_info["steps"].append(f"✓ Retrieved and reranked {len(statutory_results)} top statutory results")
+            duplicates_removed = validated_evidence.validation_metadata["statutory"].get("duplicates_removed", 0)
+            processing_info["steps"].append(f"✓ Retrieved and reranked {len(statutory_results)} top statutory results (Removed {duplicates_removed} duplicates)")
         else:
             processing_info["steps"].append("⚠ No statutory results found")
             
@@ -359,7 +366,7 @@ async def process_query(request: QueryRequest):
         processing_info["steps"].append("⚠ Retrieval pipeline not initialized")
     
     # Step 4: STRUCTURED CONTEXT BUILDING
-    structured_context_text = deps.context_builder.build_structured_context(
+    structured_context_text, evidence_mapping = deps.context_builder.build_structured_context(
         statutory_results=statutory_results,
         case_law_results=bail_results if bail_results else None,
         uploaded_docs=session_documents if 'session_documents' in locals() else None,

@@ -64,7 +64,7 @@ class ContextBuilder:
         case_law_results: List[Any] = None,
         uploaded_docs: List[Any] = None,
         max_tokens: int = 3000
-    ) -> str:
+    ) -> Tuple[str, Dict[str, Any]]:
         """
         Build structured context from search results.
         
@@ -75,7 +75,9 @@ class ContextBuilder:
             max_tokens: Maximum context length in tokens (approximate by chars * 0.25)
             
         Returns:
-            Formatted context string with clear evidence grouping
+            Tuple containing:
+            - Formatted context string with clear evidence grouping
+            - Dictionary mapping canonical evidence_id to provenance/metadata
         """
         # Group chunks by evidence type and law type
         groups = self._group_chunks(statutory_results, case_law_results, uploaded_docs)
@@ -87,14 +89,15 @@ class ContextBuilder:
             reverse=True
         )
         
-        # Build formatted context
+        # Build formatted context and machine-readable mapping
         context_parts = []
+        evidence_mapping = {}
         total_chars = 0
         max_chars = max_tokens * 4  # Rough approximation
         
         for group in sorted_groups:
             group_header = self._format_group_header(group)
-            group_content = self._format_group_content(group)
+            group_content, group_mapping = self._format_group_content_with_mapping(group)
             
             # Check if adding this group would exceed limit
             group_text = f"{group_header}\n{group_content}\n"
@@ -104,11 +107,12 @@ class ContextBuilder:
                     break
             
             context_parts.append(group_text)
+            evidence_mapping.update(group_mapping)
             total_chars += len(group_text)
         
         # Assemble final context
         if not context_parts:
-            return "No relevant legal context found."
+            return "No relevant legal context found.", {}
         
         # Detect contradictions
         contradictions = self.detect_contradictions(groups)
@@ -125,7 +129,7 @@ class ContextBuilder:
             warnings += "\n\nNote: Please analyze these discrepancies carefully and mention them in your answer."
             structured_context += warnings
         
-        return structured_context
+        return structured_context, evidence_mapping
     
     def _group_chunks(
         self,
@@ -150,11 +154,13 @@ class ContextBuilder:
                     )
                 
                 groups[group_key].add_chunk({
+                    'chunk_id': getattr(result, 'chunk_id', None),
                     'section_number': getattr(result, 'section_number', 'N/A'),
                     'text': getattr(result, 'text', ''),
                     'source': getattr(result, 'source_dataset', 'Unknown'),
                     'score': getattr(result, 'score', 0.0),
                     'is_authoritative': True,
+                    'original_result': result
                 })
         
         # Process case law results
@@ -173,12 +179,14 @@ class ContextBuilder:
                     )
                 
                 groups[group_key].add_chunk({
+                    'chunk_id': getattr(result, 'chunk_id', None),
                     'section_number': getattr(result, 'section_number', 'Case'),
                     'text': getattr(result, 'text', ''),
                     'source': getattr(result, 'source_dataset', 'Unknown'),
                     'score': getattr(result, 'score', 0.0),
                     'metadata': getattr(result, 'metadata', {}),
                     'is_authoritative': False,
+                    'original_result': result
                 })
         
         # Process uploaded documents (NON-STATUTORY)
@@ -192,12 +200,14 @@ class ContextBuilder:
             
             for doc in uploaded_docs:
                 groups[group_key].add_chunk({
+                    'chunk_id': doc.get('chunk_id', None),
                     'section_number': f"UPLOADED: {doc.get('filename', 'Document')}",
                     'text': doc.get('text', ''),
                     'source': doc.get('filename', 'Unknown'),
                     'score': doc.get('score', 0.0),
                     'is_authoritative': False,
                     'is_statutory': False,
+                    'original_result': doc
                 })
         
         return groups
@@ -278,26 +288,36 @@ class ContextBuilder:
         
         return header
     
-    def _format_group_content(self, group: ContextGroup) -> str:
-        """Format chunks within a group"""
+    def _format_group_content_with_mapping(self, group: ContextGroup) -> Tuple[str, Dict[str, Any]]:
+        """Format chunks within a group and return mapping"""
         content_parts = []
+        evidence_mapping = {}
         
         for i, chunk in enumerate(group.chunks, 1):
             section = chunk.get('section_number', 'N/A')
             text = chunk.get('text', '')
             source = chunk.get('source', 'Unknown')
             score = chunk.get('score', 0.0)
+            chunk_id = chunk.get('chunk_id')
+            original_result = chunk.get('original_result')
             
-            # Format individual chunk
-            chunk_text = f"[{i}. {section}] (Relevance: {score:.2f})\n{text}\n"
+            # Use chunk_id if available, otherwise generate a deterministic identifier for the mapping
+            mapping_id = chunk_id if chunk_id else f"chunk_{group.group_type}_{i}"
+            
+            # Format individual chunk with mapping ID
+            chunk_text = f"[{mapping_id}] {section} (Relevance: {score:.2f})\n{text}\n"
             
             # Add source attribution
             if group.group_type == 'uploaded':
                 chunk_text += f"(Source: User-uploaded - {source})\n"
             
             content_parts.append(chunk_text)
+            
+            # Store in mapping
+            if original_result:
+                evidence_mapping[mapping_id] = original_result
         
-        return "\n".join(content_parts)
+        return "\n".join(content_parts), evidence_mapping
     
     def _generate_context_footer(self, groups: Dict[str, ContextGroup]) -> str:
         """Generate metadata footer about context composition"""
