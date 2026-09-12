@@ -156,17 +156,6 @@ async def process_query_v2(
     
     # Get session documents if available
     session_documents = []
-    if request.session_id:
-        session = session_manager.get_session(request.session_id)
-        if session and session.documents:
-            from agents.query_reformulator import QueryReformulator
-            reformulator = QueryReformulator()
-            reformulated = reformulator.reformulate(query)
-            doc_results = session.search(reformulated.enhanced_query, top_k=5)
-            session_documents = [
-                {"filename": r.filename, "text": r.text, "document_type": r.document_type, "is_statutory": False, "score": r.score}
-                for r in doc_results
-            ]
     
     # Run CrewAI pipeline
     result = await deps.crew_orchestrator.process_query(
@@ -245,17 +234,6 @@ async def query_stream_v2(
             
             # Get session documents if available
             session_documents = []
-            if session_id:
-                session = session_manager.get_session(session_id)
-                if session and session.documents:
-                    from agents.query_reformulator import QueryReformulator
-                    reformulator = QueryReformulator()
-                    reformulated = reformulator.reformulate(query)
-                    doc_results = session.search(reformulated.enhanced_query, top_k=5)
-                    session_documents = [
-                        {"filename": r.filename, "text": r.text, "document_type": r.document_type, "is_statutory": False, "score": r.score}
-                        for r in doc_results
-                    ]
             
             # Run crew pipeline
             result = await deps.crew_orchestrator.process_query(

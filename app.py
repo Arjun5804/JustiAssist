@@ -99,11 +99,7 @@ async def lifespan(app: FastAPI):
     deps.reranker = LegalReranker(mode='balanced')
     deps.context_builder = ContextBuilder()
     
-    from retrieval.pipeline import RetrievalPipeline
-    deps.retrieval_pipeline = RetrievalPipeline(
-        vector_store=deps.vector_store,
-        reranker=deps.reranker
-    )
+    # RetrievalPipeline will be initialized after VectorStore is loaded
     deps.confidence_scorer = ConfidenceScorer()
     print("Enhanced RAG: reranker, context builder, confidence scorer initialized")
     
@@ -117,6 +113,13 @@ async def lifespan(app: FastAPI):
             print("Warning: Could not load vector indices. Run build_indices() first.")
     else:
         print("Warning: Vector store path not found. Run build_indices() first.")
+    
+    # Initialize RetrievalPipeline with loaded VectorStore
+    from retrieval.pipeline import RetrievalPipeline
+    deps.retrieval_pipeline = RetrievalPipeline(
+        vector_store=deps.vector_store,
+        reranker=deps.reranker
+    )
     
     # v2.0: Initialize CrewAI Orchestrator
     deps.crew_orchestrator = JustiAssistCrew(

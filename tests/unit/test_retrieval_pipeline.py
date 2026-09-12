@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 from retrieval.pipeline import RetrievalPipeline
 from retrieval.models import SearchResult
 from agents.query_classifier import QueryType
+from config import TOP_K_STATUTORY, TOP_K_CASE_LAW
 
 @pytest.fixture
 def mock_vector_store():
@@ -53,16 +54,34 @@ def test_statutory_retrieval_and_reranking(pipeline, mock_vector_store, mock_rer
     )
     
     # Verify vector store called correctly
-    mock_vector_store.hybrid_search_statutory.assert_called_once()
+    mock_vector_store.hybrid_search_statutory.assert_called_once_with(
+        "murder",
+        top_k=TOP_K_STATUTORY * 3,
+        semantic_weight=0.6,
+        bm25_weight=0.4
+    )
     
     # Verify reranker called correctly with 'precision' mode due to sections
     mock_reranker.rerank.assert_called_once()
     args, kwargs = mock_reranker.rerank.call_args
     assert kwargs['mode'] == 'precision'
     assert kwargs['requested_sections'] == ["302"]
+    assert kwargs['top_k'] == TOP_K_STATUTORY
     
     assert evidence.statutory_results == mock_reranked_results
     assert len(evidence.case_law_results) == 0
+
+def test_statutory_retrieval_balanced(pipeline, mock_vector_store, mock_reranker):
+    mock_vector_store.hybrid_search_statutory.return_value = [SearchResult(chunk_id="1", text="statute 1", score=0.8, law_type="IPC", section_number="302", source_dataset="ipc", dataset_type="statutory", metadata={})]
+    pipeline.run(
+        query="murder",
+        enhanced_query="murder",
+        query_type=QueryType.LEGAL_INFO,
+        extracted_sections=[],
+        extracted_law_types=["IPC"]
+    )
+    args, kwargs = mock_reranker.rerank.call_args
+    assert kwargs['mode'] == 'balanced'
 
 def test_case_law_retrieval_for_bail(pipeline, mock_vector_store, mock_reranker):
     mock_stat_results = [
@@ -86,7 +105,17 @@ def test_case_law_retrieval_for_bail(pipeline, mock_vector_store, mock_reranker)
         extracted_law_types=[]
     )
     
-    mock_vector_store.search_case_law.assert_called_once()
+    mock_vector_store.search_case_law.assert_called_once_with(
+        "bail conditions",
+        top_k=TOP_K_CASE_LAW * 2
+    )
+    
+    # Verify reranker called for case law with 'recall' mode
+    assert mock_reranker.rerank.call_count == 2
+    args, kwargs = mock_reranker.rerank.call_args_list[1]
+    assert kwargs['mode'] == 'recall'
+    assert kwargs['top_k'] == TOP_K_CASE_LAW
+    assert kwargs['requested_sections'] == []
     assert len(evidence.case_law_results) == 1
     assert evidence.case_law_results[0].chunk_id == "c1"
 
