@@ -31,7 +31,7 @@ Establish a reliable, reproducible test foundation for JustiAssist without alter
    - **ConfidenceScorer**: Verified mathematical multi-factor scoring (completeness, redundancy, intent).
    - **ContextBuilder**: Verified grouping logic (Statutory, Case Law, Uploaded).
    - **CitationValidator**: Verified grounding boundaries (missing citations, malformed section formats, empty assertions).
-   - **API Routes**: Created an explicit route boundary test to verify that the Phase 0B core routes remain registered.
+   - **API Routes**: Created an explicit critical-route set test for critical route registration coverage to verify that the Phase 0B core routes remain registered.
 
 ## Next Steps
 The foundation is now clean and deterministic. The next phase can focus on either migrating `tests/scripts/` to standard parametrized integration tests or moving on to Phase 2 (Modularization of retrieval logic).

@@ -49,16 +49,12 @@ def mock_vector_store():
 
 @pytest.fixture
 def mock_llm():
-    with patch('llm_provider.LLMProvider.generate') as mock_generate, \
-         patch('llm_provider.call_llm') as mock_call_llm:
-        
+    with patch('llm_provider.LLMProvider.generate') as mock_generate:
         # generate returns (response_text, answer_mode, metadata)
         mock_generate.return_value = ("Mocked LLM response.", None, {})
-        mock_call_llm.return_value = "Mocked standalone LLM response."
         
         yield {
-            "generate": mock_generate,
-            "call_llm": mock_call_llm
+            "generate": mock_generate
         }
 
 @pytest.fixture

@@ -15,9 +15,12 @@ def test_health_endpoint(client):
 
 def test_stats_endpoint(client):
     response = client.get("/stats")
-    # Even if vector store is mocked, it shouldn't crash
-    # The actual result depends on the mock
-    assert response.status_code in [200, 500]
+    assert response.status_code == 200
+    
+    data = response.json()
+    assert "statutory" in data
+    assert "case_law" in data
+    assert "embedding_model" in data
     
 def test_import_success():
     """Verify that importing the app does not crash."""
