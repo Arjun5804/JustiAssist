@@ -10,7 +10,7 @@ def mock_vector_store():
         
         mock_load.return_value = None
         
-        from reranker import SearchResult
+        from retrieval.models import SearchResult
         
         statutory_results = [
             SearchResult(

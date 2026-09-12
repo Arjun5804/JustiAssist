@@ -122,11 +122,13 @@ class JustiAssistCrew:
         reranker=None,
         context_builder=None,
         confidence_scorer=None,
+        retrieval_pipeline=None,
     ):
         self.vector_store = vector_store
         self.reranker = reranker
         self.context_builder = context_builder
         self.confidence_scorer = confidence_scorer
+        self.retrieval_pipeline = retrieval_pipeline
         
         # Initialize Firecrawl tool
         self._firecrawl_available = False
@@ -276,61 +278,25 @@ class JustiAssistCrew:
             
             from config import TOP_K_STATUTORY, TOP_K_CASE_LAW
             
-            # Statutory retrieval
-            statutory_results = []
-            if self.vector_store and self.vector_store.statutory_index is not None:
-                initial_results = self.vector_store.hybrid_search_statutory(
-                    reformulated.enhanced_query,
-                    top_k=TOP_K_STATUTORY * 3,
-                    semantic_weight=0.6,
-                    bm25_weight=0.4
+            # Statutory & Case Law retrieval using RetrievalPipeline
+            if self.retrieval_pipeline:
+                evidence = self.retrieval_pipeline.run(
+                    query=query,
+                    enhanced_query=reformulated.enhanced_query,
+                    query_type=query_type,
+                    extracted_sections=requested_sections,
+                    extracted_law_types=reformulated.extracted_law_types,
+                    session_id=session_id
                 )
-                
-                # Rerank
-                if initial_results and self.reranker:
-                    from reranker import SearchResult as RerankSearchResult
-                    rerank_inputs = [
-                        RerankSearchResult(
-                            chunk_id=r.chunk_id, text=r.text, score=r.score,
-                            law_type=r.law_type, section_number=r.section_number,
-                            source_dataset=r.source_dataset, dataset_type=r.dataset_type,
-                            metadata=r.metadata
-                        ) for r in initial_results
-                    ]
-                    rerank_mode = 'precision' if requested_sections else 'balanced'
-                    statutory_results = self.reranker.rerank(
-                        results=rerank_inputs,
-                        requested_sections=requested_sections,
-                        extracted_law_types=reformulated.extracted_law_types,
-                        top_k=TOP_K_STATUTORY,
-                        mode=rerank_mode
-                    )
-                else:
-                    statutory_results = initial_results or []
-            
-            # Case law retrieval (for bail queries)
-            bail_results = []
-            if query_type == QueryType.BAIL_QUERY and self.vector_store:
-                initial_case_law = self.vector_store.search_case_law(
-                    reformulated.enhanced_query,
-                    top_k=TOP_K_CASE_LAW * 2
-                )
-                if initial_case_law and self.reranker:
-                    from reranker import SearchResult as RerankSearchResult
-                    rerank_case = [
-                        RerankSearchResult(
-                            chunk_id=r.chunk_id, text=r.text, score=r.score,
-                            law_type=r.law_type, section_number=r.section_number,
-                            source_dataset=r.source_dataset, dataset_type=r.dataset_type,
-                            metadata=r.metadata
-                        ) for r in initial_case_law
-                    ]
-                    bail_results = self.reranker.rerank(
-                        results=rerank_case, requested_sections=[],
-                        top_k=TOP_K_CASE_LAW, mode='recall'
-                    )
-                else:
-                    bail_results = initial_case_law or []
+                statutory_results = evidence.statutory_results
+                bail_results = evidence.case_law_results
+                # If session_documents were fetched by pipeline, we could use them, 
+                # but they were passed to process_query, so we can ignore the pipeline's copy 
+                # or use them. Since process_query gets them passed from api/query.py,
+                # we don't necessarily need to overwrite them.
+            else:
+                statutory_results = []
+                bail_results = []
             
             total_retrieved = len(statutory_results) + len(bail_results)
             result.processing_info["steps"].append(f"✓ ResearcherAgent: {total_retrieved} results retrieved & reranked")

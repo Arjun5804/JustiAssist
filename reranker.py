@@ -9,17 +9,7 @@ from dataclasses import dataclass
 import numpy as np
 
 
-@dataclass
-class SearchResult:
-    """Unified search result structure"""
-    chunk_id: str
-    text: str
-    score: float
-    law_type: str
-    section_number: str
-    source_dataset: str
-    dataset_type: str
-    metadata: Dict[str, Any]
+from retrieval.models import SearchResult
 
 
 class LegalReranker:

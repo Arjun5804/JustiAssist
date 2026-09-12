@@ -27,17 +27,7 @@ from config import (
 from chunker import TextChunk
 
 
-@dataclass
-class SearchResult:
-    """Search result from vector store"""
-    chunk_id: str
-    text: str
-    score: float
-    law_type: str
-    section_number: str
-    source_dataset: str
-    dataset_type: str
-    metadata: Dict[str, Any]
+from retrieval.models import SearchResult
 
 
 class VectorStore:

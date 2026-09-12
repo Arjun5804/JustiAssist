@@ -13,6 +13,7 @@ class DepsContainer:
         self.context_builder = None
         self.confidence_scorer = None
         self.llm_provider = None
+        self.retrieval_pipeline = None
         
         # Agents (Legacy / Utility)
         self.query_classifier = None

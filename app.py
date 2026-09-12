@@ -65,7 +65,8 @@ from prompts.templates import (
 
 from services.news_scraper import get_news_scraper
 from services.pipeline_events import SyncPipelineEmitter
-from reranker import LegalReranker, SearchResult as RerankSearchResult
+from reranker import LegalReranker
+from retrieval.models import SearchResult as RerankSearchResult
 from context_builder import ContextBuilder
 from confidence_scorer import ConfidenceScorer
 
@@ -97,6 +98,12 @@ async def lifespan(app: FastAPI):
     # Initialize enhanced RAG components
     deps.reranker = LegalReranker(mode='balanced')
     deps.context_builder = ContextBuilder()
+    
+    from retrieval.pipeline import RetrievalPipeline
+    deps.retrieval_pipeline = RetrievalPipeline(
+        vector_store=deps.vector_store,
+        reranker=deps.reranker
+    )
     deps.confidence_scorer = ConfidenceScorer()
     print("Enhanced RAG: reranker, context builder, confidence scorer initialized")
     
@@ -117,6 +124,7 @@ async def lifespan(app: FastAPI):
         reranker=deps.reranker,
         context_builder=deps.context_builder,
         confidence_scorer=deps.confidence_scorer,
+        retrieval_pipeline=deps.retrieval_pipeline
     )
     print("CrewAI Orchestrator initialized with 5 agents")
     

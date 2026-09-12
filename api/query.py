@@ -2,7 +2,6 @@
 from audit_logger import audit_logger
 from metrics import metrics
 from config import GROQ_MODEL
-from reranker import SearchResult as RerankSearchResult
 from llm_provider import LLMProvider
 
 
@@ -350,113 +349,36 @@ async def process_query(request: QueryRequest):
     print(f"[ENHANCED REFORMULATION] Sections: {requested_sections}")
     print(f"[ENHANCED REFORMULATION] Enhanced query: {reformulated.enhanced_query}")
     
-    # Step 2.5: CHECK FOR SESSION DOCUMENTS (if session_id provided)
-    session_documents = []
-    doc_search_results = []
-    if request.session_id:
-        session = session_manager.get_session(request.session_id)
-        if session and session.documents:
-            # Search the session's documents for relevant chunks
-            doc_search_results = session.search(reformulated.enhanced_query, top_k=5)
-            session_documents = [
-                {
-                    "filename": r.filename,
-                    "text": r.text,
-                    "document_type": r.document_type,
-                    "is_statutory": False,
-                    "score": r.score
-                }
-                for r in doc_search_results
-            ]
+    # Step 3: RETRIEVAL PIPELINE
+    if deps.retrieval_pipeline:
+        evidence = deps.retrieval_pipeline.run(
+            query=query,
+            enhanced_query=reformulated.enhanced_query,
+            query_type=query_type,
+            extracted_sections=requested_sections,
+            extracted_law_types=reformulated.extracted_law_types,
+            session_id=request.session_id
+        )
+        session_documents = evidence.session_documents
+        statutory_results = evidence.statutory_results
+        bail_results = evidence.case_law_results
+        
+        if session_documents:
             processing_info["steps"].append(f"✓ Retrieved {len(session_documents)} chunks from uploaded documents")
             print(f"[SESSION DOCS] Found {len(session_documents)} document chunks for session {request.session_id}")
-    
-    # Step 3: TWO-STAGE RETRIEVAL WITH HYBRID SEARCH
-    # Stage 1: Hybrid search (BM25 + semantic) for better section matching
-    initial_results = deps.vector_store.hybrid_search_statutory(
-        reformulated.enhanced_query,
-        top_k=TOP_K_STATUTORY * 3,  # Over-retrieve for reranking
-        semantic_weight=0.6,
-        bm25_weight=0.4
-    )
-    
-    processing_info["steps"].append(f"✓ Hybrid search retrieved {len(initial_results)} candidates")
-    
-    # Stage 2: RERANK with legal-specific signals
-    if initial_results:
-        # Convert to deps.reranker format
-        rerank_results = []
-        for r in initial_results:
-            rerank_results.append(RerankSearchResult(
-                chunk_id=r.chunk_id,
-                text=r.text,
-                score=r.score,
-                law_type=r.law_type,
-                section_number=r.section_number,
-                source_dataset=r.source_dataset,
-                dataset_type=r.dataset_type,
-                metadata=r.metadata
-            ))
-        
-        # Determine reranking mode
-        if requested_sections:
-            rerank_mode = 'precision'  # Section-specific query
+            
+        if statutory_results:
+            processing_info["steps"].append(f"✓ Retrieved and reranked {len(statutory_results)} top statutory results")
         else:
-            rerank_mode = 'balanced'  # General query
-        
-        # Apply deps.reranker
-        statutory_results = deps.reranker.rerank(
-            results=rerank_results,
-            requested_sections=requested_sections,
-            extracted_law_types=reformulated.extracted_law_types,
-            top_k=TOP_K_STATUTORY,
-            mode=rerank_mode
-        )
-        
-        processing_info["steps"].append(
-            f"✓ Reranked with {rerank_mode} mode → {len(statutory_results)} top results"
-        )
-        
-        # Log reranking details
-        print(f"\n{'='*60}")
-        print(f"[RERANKING DEBUG] Mode: {rerank_mode}")
-        print(f"[RERANKING DEBUG] Top-3 scores:")
-        for i, r in enumerate(statutory_results[:3], 1):
-            scores = r.metadata.get('reranking_scores', {})
-            print(f"  {i}. {r.section_number} - Final: {r.score:.3f} "
-                  f"(Statute: {scores.get('statute_presence', 0):.2f}, "
-                  f"Match: {scores.get('section_match', 0):.2f})")
-        print(f"{'='*60}\n")
+            processing_info["steps"].append("⚠ No statutory results found")
+            
+        if bail_results:
+            processing_info["steps"].append(f"✓ Retrieved {len(bail_results)} case law precedents")
     else:
+        session_documents = []
         statutory_results = []
-        processing_info["steps"].append("⚠ No results from initial retrieval")
-    
-    # Retrieve case law if bail query
-    bail_results = []
-    if query_type == QueryType.BAIL_QUERY:
-        initial_case_law = deps.vector_store.search_case_law(
-            reformulated.enhanced_query,
-            top_k=TOP_K_CASE_LAW * 2  # Over-retrieve
-        )
-        
-        # Rerank case law (less aggressive, focus on semantic)
-        if initial_case_law:
-            rerank_case_law = [
-                RerankSearchResult(
-                    chunk_id=r.chunk_id, text=r.text, score=r.score,
-                    law_type=r.law_type, section_number=r.section_number,
-                    source_dataset=r.source_dataset, dataset_type=r.dataset_type,
-                    metadata=r.metadata
-                ) for r in initial_case_law
-            ]
-            bail_results = deps.reranker.rerank(
-                results=rerank_case_law,
-                requested_sections=[],
-                top_k=TOP_K_CASE_LAW,
-                mode='recall'  # Less aggressive for case law
-            )
-        
-        processing_info["steps"].append(f"✓ Retrieved {len(bail_results)} case law precedents")
+        bail_results = []
+        processing_info["steps"].append("⚠ Retrieval pipeline not initialized")
     
     # Step 4: STRUCTURED CONTEXT BUILDING
     structured_context_text = deps.context_builder.build_structured_context(
@@ -833,7 +755,6 @@ async def query_stream(
     Stream query processing events via SSE with FULL ENHANCED RAG.
     """
     from services.pipeline_events import SyncPipelineEmitter
-    from deps.reranker import SearchResult as RerankSearchResult
     import json
     import time as time_module
     
@@ -860,52 +781,28 @@ async def query_stream(
             requested_sections = reformulated.extracted_sections if hasattr(reformulated, 'extracted_sections') else []
             yield f"data: {json.dumps({'type': 'stage', 'stage': 'reformulate', 'status': 'complete', 'data': {'sections': len(requested_sections)}})}\n\n"
             
-            # Stage 2.5: Session Documents (parallel to statutory retrieval)
-            session_documents = []
-            if request.session_id:
-                session = session_manager.get_session(request.session_id)
-                if session and session.documents:
-                    doc_search_results = session.search(reformulated.enhanced_query, top_k=5)
-                    session_documents = [
-                        {"filename": r.filename, "text": r.text, "document_type": r.document_type, "is_statutory": False, "score": r.score}
-                        for r in doc_search_results
-                    ]
-            
-            # Stage 3: Retrieval
-            emitter.start('retrieve')
-            yield f"data: {json.dumps({'type': 'stage', 'stage': 'retrieve', 'status': 'active'})}\n\n"
-            
-            # Run statutory and case law retrieval in parallel
-            async def get_statutory():
-                return deps.vector_store.hybrid_search_statutory(
-                    reformulated.enhanced_query, top_k=TOP_K_STATUTORY * 3,
-                    semantic_weight=0.6, bm25_weight=0.4
-                ) if deps.vector_store and deps.vector_store.statutory_index else []
-            
-            async def get_case_law():
-                if query_type == QueryType.BAIL_QUERY and deps.vector_store and deps.vector_store.case_law_index:
-                    return deps.vector_store.search_case_law(reformulated.enhanced_query, top_k=TOP_K_CASE_LAW * 2)
-                return []
-            
-            initial_statutory, initial_case_law = await asyncio.gather(get_statutory(), get_case_law())
-            
-            total_retrieved = len(initial_statutory) + len(initial_case_law)
+            # Run Retrieval Pipeline
+            if deps.retrieval_pipeline:
+                evidence = deps.retrieval_pipeline.run(
+                    query=request.query,
+                    enhanced_query=reformulated.enhanced_query,
+                    query_type=query_type,
+                    extracted_sections=requested_sections,
+                    extracted_law_types=reformulated.extracted_law_types,
+                    session_id=request.session_id
+                )
+                session_documents = evidence.session_documents
+                statutory_results = evidence.statutory_results
+                bail_results = evidence.case_law_results
+            else:
+                session_documents, statutory_results, bail_results = [], [], []
+                
+            total_retrieved = len(statutory_results) + len(bail_results)
             yield f"data: {json.dumps({'type': 'stage', 'stage': 'retrieve', 'status': 'complete', 'data': {'results': total_retrieved}})}\n\n"
             
-            # Stage 4: Reranking
+            # Stage 4: Reranking (Already done inside pipeline, just emit complete)
             emitter.start('rerank')
             yield f"data: {json.dumps({'type': 'stage', 'stage': 'rerank', 'status': 'active'})}\n\n"
-            
-            statutory_results = []
-            if initial_statutory:
-                rerank_inputs = [RerankSearchResult(chunk_id=r.chunk_id, text=r.text, score=r.score, law_type=r.law_type, section_number=r.section_number, source_dataset=r.source_dataset, dataset_type=r.dataset_type, metadata=r.metadata) for r in initial_statutory]
-                statutory_results = deps.reranker.rerank(results=rerank_inputs, requested_sections=requested_sections, top_k=TOP_K_STATUTORY, mode='precision' if requested_sections else 'balanced')
-            
-            bail_results = []
-            if initial_case_law:
-                rerank_case_law = [RerankSearchResult(chunk_id=r.chunk_id, text=r.text, score=r.score, law_type=r.law_type, section_number=r.section_number, source_dataset=r.source_dataset, dataset_type=r.dataset_type, metadata=r.metadata) for r in initial_case_law]
-                bail_results = deps.reranker.rerank(results=rerank_case_law, requested_sections=[], top_k=TOP_K_CASE_LAW, mode='recall')
-            
             yield f"data: {json.dumps({'type': 'stage', 'stage': 'rerank', 'status': 'complete'})}\n\n"
             
             # Stage 5: Scoring
