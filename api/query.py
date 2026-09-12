@@ -329,7 +329,7 @@ async def process_query(request: QueryRequest):
     
     # Step 3: RETRIEVAL PIPELINE
     if deps.retrieval_pipeline:
-        evidence = deps.retrieval_pipeline.run(
+        validated_evidence = deps.retrieval_pipeline.run(
             query=query,
             enhanced_query=reformulated.enhanced_query,
             query_type=query_type,
@@ -337,11 +337,6 @@ async def process_query(request: QueryRequest):
             extracted_law_types=reformulated.extracted_law_types,
             session_id=request.session_id
         )
-        
-        # VALIDATE EVIDENCE
-        from retrieval.evidence import EvidenceValidator
-        validator = EvidenceValidator()
-        validated_evidence = validator.validate(evidence)
         
         session_documents = validated_evidence.session_documents
         statutory_results = validated_evidence.statutory_results
@@ -768,7 +763,7 @@ async def query_stream(
             
             # Run Retrieval Pipeline
             if deps.retrieval_pipeline:
-                evidence = deps.retrieval_pipeline.run(
+                validated_evidence = deps.retrieval_pipeline.run(
                     query=request.query,
                     enhanced_query=reformulated.enhanced_query,
                     query_type=query_type,
@@ -776,9 +771,9 @@ async def query_stream(
                     extracted_law_types=reformulated.extracted_law_types,
                     session_id=request.session_id
                 )
-                session_documents = evidence.session_documents
-                statutory_results = evidence.statutory_results
-                bail_results = evidence.case_law_results
+                session_documents = validated_evidence.session_documents
+                statutory_results = validated_evidence.statutory_results
+                bail_results = validated_evidence.case_law_results
             else:
                 session_documents, statutory_results, bail_results = [], [], []
                 

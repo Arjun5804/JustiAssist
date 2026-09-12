@@ -46,12 +46,13 @@ Sources are categorized to help downstream components weight their legal signifi
 
 ## 3. Evidence Validation Layer
 
-Before evidence is passed to the generation layer, it is validated by the `EvidenceValidator` (`retrieval/evidence.py`).
+Before evidence is returned by the canonical `RetrievalPipeline`, it is validated by the `EvidenceValidator` (`retrieval/evidence.py`). The pipeline directly returns a `ValidatedEvidenceSet`.
 
 Responsibilities:
-*   **Deduplication:** Removes exact duplicates (same text and provenance).
+*   **Deduplication:** Removes exact duplicates (same text and provenance) regardless of internal chunk_id differences.
+*   **ID Validation:** Explicitly checks and requires canonical `chunk_id`. Missing/invalid IDs cause the item to be deterministically rejected.
 *   **Conflict Preservation:** If two items contain the same text but have materially different provenance (e.g. from a different database), both are preserved. Contradictions are not resolved at this stage.
-*   **Provenance Fallback:** Missing provenance is gracefully filled with `UNKNOWN` defaults without fabricating legal dates.
+*   **Provenance Fallback:** Missing provenance is gracefully filled with `UNKNOWN` defaults without mutating the original retrieved structures and without fabricating legal dates.
 *   **Contract:** The validator outputs a `ValidatedEvidenceSet`, solidifying the evidence contract before context generation.
 
 ## 4. Claim to Evidence Mapping (The Contract)

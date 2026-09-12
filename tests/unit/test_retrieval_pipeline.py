@@ -68,7 +68,12 @@ def test_statutory_retrieval_and_reranking(pipeline, mock_vector_store, mock_rer
     assert kwargs['requested_sections'] == ["302"]
     assert kwargs['top_k'] == TOP_K_STATUTORY
     
-    assert evidence.statutory_results == mock_reranked_results
+    assert len(evidence.statutory_results) == 1
+    result = evidence.statutory_results[0]
+    assert result.chunk_id == mock_reranked_results[0].chunk_id
+    assert result.text == mock_reranked_results[0].text
+    assert result.provenance is not None
+    assert result.provenance.source_authority.value == "UNKNOWN"
     assert len(evidence.case_law_results) == 0
 
 def test_statutory_retrieval_balanced(pipeline, mock_vector_store, mock_reranker):

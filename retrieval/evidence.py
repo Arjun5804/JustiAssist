@@ -44,42 +44,62 @@ class EvidenceValidator:
         seen_signatures: Set[str] = set()
         
         missing_provenance_count = 0
+        missing_id_count = 0
         duplicates_removed = 0
         
         for result in results:
-            # 1. Provenance Validation
-            if not result.provenance:
+            # 3. ID Validation
+            if not result.chunk_id:
+                missing_id_count += 1
+                # Reject items without valid canonical chunk_ids
+                continue
+                
+            # 1. Provenance Validation without mutation
+            safe_provenance = result.provenance
+            if not safe_provenance:
                 missing_provenance_count += 1
-                result.provenance = Provenance() # Provide a safe default rather than fabricating
+                safe_provenance = Provenance() # Use a safe default
                 
             # 2. Deduplication Signature
             # Two items are identical if they have the same text AND the same source provenance
-            # (including the existing SearchResult source metadata)
+            # We explicitly exclude chunk_id from the identity signature so that we catch true duplicates
+            # regardless of underlying vector index ID differences.
             provenance_signature = (
-                result.provenance.source_authority.value,
-                result.provenance.source_date,
+                safe_provenance.source_authority.value,
+                safe_provenance.source_date,
+                safe_provenance.effective_from,
+                safe_provenance.effective_until,
             )
+            
             identity_signature = (
-                result.chunk_id,
                 result.text.strip(),
                 result.source_dataset,
+                result.dataset_type,
+                result.law_type,
                 result.section_number,
                 provenance_signature
             )
             
-            sig_hash = hash(identity_signature)
-            
-            if sig_hash in seen_signatures:
+            if identity_signature in seen_signatures:
                 duplicates_removed += 1
                 continue
                 
-            seen_signatures.add(sig_hash)
-            deduplicated_results.append(result)
+            seen_signatures.add(identity_signature)
+            
+            # Create a shallow copy with the validated provenance if it was missing
+            # to avoid mutating the original SearchResult object
+            validated_result = result
+            if not result.provenance:
+                from dataclasses import replace
+                validated_result = replace(result, provenance=safe_provenance)
+                
+            deduplicated_results.append(validated_result)
             
         metadata = {
             "original_count": len(results),
             "validated_count": len(deduplicated_results),
             "duplicates_removed": duplicates_removed,
-            "missing_provenance_count": missing_provenance_count
+            "missing_provenance_count": missing_provenance_count,
+            "missing_id_count": missing_id_count
         }
         return deduplicated_results, metadata
