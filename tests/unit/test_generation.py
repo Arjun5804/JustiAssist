@@ -147,3 +147,52 @@ async def test_pipeline_no_evidence():
     result = await pipeline.run("test", empty_evidence)
     assert result.is_abstention
     assert result.answer == "The available retrieved evidence does not sufficiently support a reliable answer."
+
+@pytest.fixture
+def session_evidence():
+    return ValidatedEvidenceSet(
+        statutory_results=[],
+        case_law_results=[],
+        session_documents=[
+            {
+                "chunk_id": "doc_chunk_1",
+                "filename": "uploaded_fir.pdf",
+                "text": "The accused was seen at the crime scene.",
+                "document_type": "FIR",
+                "score": 0.95
+            }
+        ]
+    )
+
+@pytest.mark.asyncio
+async def test_generator_includes_session_documents(session_evidence):
+    from generation.generator import GroundedGenerator
+    generator = GroundedGenerator()
+    evidence_text = generator._build_evidence_text(session_evidence)
+    assert "[Evidence ID: doc_chunk_1]" in evidence_text
+    assert "uploaded_fir.pdf" in evidence_text
+    assert "The accused was seen at the crime scene." in evidence_text
+
+@pytest.mark.asyncio
+async def test_verifier_resolves_session_documents(session_evidence):
+    verifier = ClaimVerifier()
+    
+    # Mock LLM verification to pass
+    verifier._semantic_verify = AsyncMock(return_value=ClaimVerification(
+        claim_id="c1", verdict=VerificationVerdict.SUPPORTED
+    ))
+    
+    claims = [Claim(claim_id="c1", text="Accused was seen.", evidence_ids=["doc_chunk_1"])]
+    results = await verifier.verify_claims(claims, session_evidence)
+    
+    assert len(results) == 1
+    assert results[0].verdict == VerificationVerdict.SUPPORTED
+
+@pytest.mark.asyncio
+async def test_verifier_invalid_session_document_id(session_evidence):
+    verifier = ClaimVerifier()
+    claims = [Claim(claim_id="c1", text="Accused was seen.", evidence_ids=["invalid_doc_id"])]
+    results = await verifier.verify_claims(claims, session_evidence)
+    
+    assert len(results) == 1
+    assert results[0].verdict == VerificationVerdict.INVALID_REFERENCE

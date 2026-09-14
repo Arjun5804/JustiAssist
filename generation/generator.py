@@ -27,6 +27,13 @@ class GroundedGenerator:
         for item in evidence.case_law_results:
             text_parts.append(f"[Evidence ID: {item.chunk_id}]\nSection: {item.section_number}\nSource: {item.source_dataset}\n{item.text}\n")
             
+        for doc in evidence.session_documents:
+            chunk_id = doc.get("chunk_id", "unknown_chunk")
+            text = doc.get("text", "")
+            doc_type = doc.get("document_type", "Uploaded Document")
+            filename = doc.get("filename", "document")
+            text_parts.append(f"[Evidence ID: {chunk_id}]\nDocument Type: {doc_type}\nSource: {filename}\n{text}\n")
+            
         return "\n".join(text_parts)
 
     def _extract_json(self, text: str) -> str:

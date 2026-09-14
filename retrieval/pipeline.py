@@ -27,7 +27,7 @@ class RetrievalPipeline:
             if session and session.documents:
                 doc_results = session.search(enhanced_query, top_k=5)
                 evidence.session_documents = [
-                    {"filename": r.filename, "text": r.text, "document_type": r.document_type, "is_statutory": False, "score": r.score}
+                    {"chunk_id": r.chunk_id, "filename": r.filename, "text": r.text, "document_type": r.document_type, "is_statutory": False, "score": r.score}
                     for r in doc_results
                 ]
 

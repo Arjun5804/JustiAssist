@@ -411,8 +411,6 @@ class JustiAssistCrew:
             from generation.pipeline import GroundedGenerationPipeline
             
             pipeline = GroundedGenerationPipeline(max_retries=2)
-            
-            pipeline = GroundedGenerationPipeline(max_retries=2)
                 
             gen_response = await pipeline.run(query, evidence)
             

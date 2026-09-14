@@ -22,6 +22,18 @@ class ClaimVerifier:
             mapping[item.chunk_id] = item
         for item in evidence.case_law_results:
             mapping[item.chunk_id] = item
+        for doc in evidence.session_documents:
+            chunk_id = doc.get("chunk_id", "unknown_chunk")
+            mapping[chunk_id] = SearchResult(
+                chunk_id=chunk_id,
+                text=doc.get("text", ""),
+                score=doc.get("score", 0.0),
+                law_type="document",
+                section_number="N/A",
+                source_dataset="session_documents",
+                dataset_type="document",
+                metadata={"filename": doc.get("filename", "")}
+            )
         return mapping
 
     async def verify_claims(

@@ -457,6 +457,19 @@ async def process_query(request: QueryRequest):
             referenced_ids.update(c.evidence_ids)
             
     all_results = statutory_results + bail_results
+    for doc in validated_evidence.session_documents:
+        from retrieval.models import SearchResult
+        all_results.append(SearchResult(
+            chunk_id=doc.get("chunk_id", "unknown"),
+            text=doc.get("text", ""),
+            score=doc.get("score", 0.0),
+            law_type="document",
+            section_number="N/A",
+            source_dataset="session_documents",
+            dataset_type="document",
+            metadata={"filename": doc.get("filename", "")}
+        ))
+        
     used_results = [r for r in all_results if r.chunk_id in referenced_ids]
     citations = format_citations(used_results)
     
@@ -474,8 +487,16 @@ async def process_query(request: QueryRequest):
     )
     
     # OBS: Update response metrics
+    
+    validity_score = 1.0
+    if not gen_response.is_abstention and referenced_ids:
+        all_canonical_ids = {r.chunk_id for r in all_results}
+        valid_citations = len(referenced_ids.intersection(all_canonical_ids))
+        total_citations = len(referenced_ids)
+        validity_score = valid_citations / total_citations if total_citations > 0 else 1.0
+
     metrics.observe("latency_ms", latency_ms)
-    metrics.observe("citation_validity", 1.0) # Default to 1.0 for valid grounded generation
+    metrics.observe("citation_validity", validity_score)
 
     
     if use_fallback:
@@ -704,8 +725,30 @@ async def query_stream(
             
             emitter.complete('generate')
             
+            referenced_ids = set()
+            if not gen_response.is_abstention:
+                for c in gen_response.claims:
+                    referenced_ids.update(c.evidence_ids)
+                    
+            all_results = statutory_results + bail_results
+            for doc in validated_evidence.session_documents:
+                from retrieval.models import SearchResult
+                all_results.append(SearchResult(
+                    chunk_id=doc.get("chunk_id", "unknown"),
+                    text=doc.get("text", ""),
+                    score=doc.get("score", 0.0),
+                    law_type="document",
+                    section_number="N/A",
+                    source_dataset="session_documents",
+                    dataset_type="document",
+                    metadata={"filename": doc.get("filename", "")}
+                ))
+                
+            used_results = [r for r in all_results if r.chunk_id in referenced_ids]
+            response_citations = [c.model_dump() for c in format_citations(used_results)]
+            
             response_data = {
-                "query": request.query, "query_type": query_type.value, "answer": answer, "citations": [c.model_dump() for c in format_citations(statutory_results + bail_results)],
+                "query": request.query, "query_type": query_type.value, "answer": answer, "citations": response_citations,
                 "confidence_score": round(confidence_score, 2), "bail_assessment": bail_assessment, "grounding_status": grounding_status,
                 "processing_info": emitter.get_summary(), "kanoon_cases": kanoon_cases, "news_context": news_context,
                 "sources_used": ["local_vectors"] + (["indian_kanoon"] if kanoon_cases else []) + (["legal_news"] if news_context else [])
