@@ -295,6 +295,8 @@ class JustiAssistCrew:
                 # or use them. Since process_query gets them passed from api/query.py,
                 # we don't necessarily need to overwrite them.
             else:
+                from retrieval.models import ValidatedEvidenceSet
+                evidence = ValidatedEvidenceSet(statutory_results=[], case_law_results=[], session_documents=[])
                 statutory_results = []
                 bail_results = []
             
@@ -410,13 +412,7 @@ class JustiAssistCrew:
             
             pipeline = GroundedGenerationPipeline(max_retries=2)
             
-            if not self.retrieval_pipeline:
-                # Mock a ValidatedEvidenceSet if pipeline is missing
-                from retrieval.models import ValidatedEvidenceSet
-                evidence = ValidatedEvidenceSet()
-            else:
-                # `evidence` variable from STAGE 3 is the ValidatedEvidenceSet
-                pass
+            pipeline = GroundedGenerationPipeline(max_retries=2)
                 
             gen_response = await pipeline.run(query, evidence)
             
