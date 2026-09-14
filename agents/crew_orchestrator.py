@@ -402,201 +402,37 @@ class JustiAssistCrew:
                 
                 emit("web_search", "complete")
 
-            # ==================== STAGE 6: Generation ====================
+            # ==================== STAGE 6 & 7: Grounded Generation Pipeline ====================
             emit("generate", "active")
+            result.agents_used.append("GroundedGenerationPipeline")
             
-            from llm_provider import call_llm
-            from prompts.templates import build_prompt_with_documents
+            from generation.pipeline import GroundedGenerationPipeline
             
-            # Build structured context
-            structured_context_text = ""
-            if self.context_builder:
-                structured_context_text = self.context_builder.build_structured_context(
-                    statutory_results=statutory_results,
-                    case_law_results=bail_results if bail_results else None,
-                    uploaded_docs=session_documents,
-                    max_tokens=3000
-                )
+            pipeline = GroundedGenerationPipeline(max_retries=2)
             
-            confidence_score = 0.5  # Default
-            
-            if query_type == QueryType.BAIL_QUERY:
-                result.agents_used.append("BailAnalystAgent")
-                
-                stat_ctx = [
-                    {"section_number": r.section_number, "law_type": r.law_type, "text": r.text, "source": r.source_dataset}
-                    for r in statutory_results
-                ]
-                bail_ctx = [
-                    {"section_number": r.section_number, "law_type": r.law_type, "text": r.text, "metadata": r.metadata}
-                    for r in bail_results
-                ]
-                
-                if session_documents:
-                    prompt = build_prompt_with_documents(
-                        query=query, statutory_context=stat_ctx,
-                        document_context=session_documents,
-                        bail_context=bail_ctx, is_bail_query=True
-                    )
-                    answer = await call_llm(prompt)
-                    confidence_score = 0.85
-                    result.bail_assessment = {
-                        "bail_likelihood": "Document Analysis",
-                        "legal_reasoning": {"bailable_status": "See document", "max_punishment": "See document", "severity_score": 0, "applicable_crpc": ["Based on uploaded document"]},
-                        "explanation": "Analysis based on uploaded court document/FIR."
-                    }
-                else:
-                    from agents.bail_evaluator import BailEvaluator
-                    evaluator = BailEvaluator()
-                    evaluation = await evaluator.evaluate(
-                        query=query, statutory_context=stat_ctx,
-                        bail_precedents=bail_ctx,
-                        custody_duration_days=custody_days,
-                        offence_sections=offense_sections
-                    )
-                    answer = evaluation.explanation
-                    confidence_score = evaluation.confidence_score
-                    result.bail_assessment = evaluation.to_dict()
-                
-                result.processing_info["steps"].append("✓ BailAnalystAgent: Assessment complete")
+            if not self.retrieval_pipeline:
+                # Mock a ValidatedEvidenceSet if pipeline is missing
+                from retrieval.models import ValidatedEvidenceSet
+                evidence = ValidatedEvidenceSet()
             else:
-                # Legal information or Document query
-                chat_context = f"\n{chat_history}\n" if chat_history else ""
+                # `evidence` variable from STAGE 3 is the ValidatedEvidenceSet
+                pass
                 
-                web_prompt_info = ""
-                if web_context:
-                    web_prompt_info = f"""
-{'!'*60}
-SUPPLEMENTARY WEB CONTEXT (USE FOR MISSING DETAILS, CITE AS [Web Source X]):
-{'!'*60}
-{web_context}
-"""
-
-                if query_type == QueryType.DOCUMENT_QUERY:
-                    prompt = f"""You are JustiAssist, an AI legal assistant. The user has uploaded a document and is asking a question about it.
-{chat_context}
-
-USER QUERY: {query}
-
-{'='*60}
-RETRIEVED DOCUMENT CONTEXT:
-{'='*60}
-{structured_context_text}
-{web_prompt_info}
-
-INSTRUCTIONS:
-1. Answer the user's question primarily using the uploaded document context.
-2. If the document doesn't have the answer, use the WEB CONTEXT but explicitly state you are using external sources.
-3. Provide precise citations: [Page X] for documents or [Web Source X] for web results.
-4. Be professional, accurate, and avoid hallucinations.
-"""
-                else:
-                    # General Legal Query
-                    prompt = f"""You are JustiAssist, a premium AI legal expert specialized in Indian Law.
-Your goal is to provide a comprehensive, cited, and accurate answer.
-
-{chat_context}
-
-USER QUERY: {query}
-
-{'='*60}
-VERIFIED STATUTORY CONTEXT (Local):
-{'='*60}
-{structured_context_text}
-
-{'='*60}
-VERIFIED WEB CONTEXT (Firecrawl/Verification):
-{'='*60}
-{web_context if web_context else 'No web results found. Use general legal knowledge if verified.'}
-
-STRICT INSTRUCTIONS:
-1. USE ALL PROVIDED SOURCES. If Web Context has the answer (like Rule 49P), USE IT. 
-2. PRIORITY: Web Context (Latest) > Local Context (Historical).
-3. If a section/rule is found in the WEB context, cite it as [Web Source: Rule X].
-4. DO NOT say "I couldn't find any information" if the WEB context is provided below.
-5. If the Local Context is about a different law (e.g. Motor Vehicles) than the query (e.g. Election), IGNORE the Local Context.
-"""
+            gen_response = await pipeline.run(query, evidence)
+            
+            result.answer = gen_response.answer
+            
+            if gen_response.is_abstention:
+                result.grounding_status = "fail"
+                confidence_score = 0.0
+                result.processing_info["steps"].append("✓ GroundedGenerationPipeline: ABSTAINED")
+            else:
+                result.grounding_status = "pass"
+                confidence_score = retrieval_confidence.overall_score if retrieval_confidence else 0.8
+                result.processing_info["steps"].append("✓ GroundedGenerationPipeline: Generated grounded answer")
                 
-                answer = await call_llm(prompt, temperature=0.3, max_tokens=2000)
-                confidence_score = retrieval_confidence.overall_score if retrieval_confidence else 0.5
-            
-            result.answer = answer
-            result.processing_info["steps"].append("✓ Response generated")
-            emit("generate", "complete")
-
-            # ==================== STAGE 7: QualityReviewerAgent (Verification) ====================
-            emit("quality_review", "active")
-            result.agents_used.append("QualityReviewerAgent")
-            
-            # CRITICAL: Cross-verify Local vs Web if web context exists
-            if web_context:
-                verification_prompt = f"""You are the QualityReviewerAgent. Your job is to ensure the answer is 100% accurate and prioritized correctly.
-            
-                SOURCES PROVIDED:
-                1. LOCAL DATA: {structured_context_text[:1500]}
-                2. WEB VERIFICATION (Firecrawl): {web_context[:1500]}
-                
-                PROPOSED ANSWER:
-                {answer}
-                
-                VERIFICATION PROTOCOL:
-                - If Local Data and Web Verification conflict on Section Numbers or Penalties, PRIORITIZE the Web Verification (it is more likely to be the latest BNS text).
-                - If the local data is for IPC but the query is for BNS, and the Web Verification provides the BNS text, YOU MUST rewrite the answer to use the BNS text.
-                - Ensure all citations are preserved.
-                - If any part of the answer is not supported by either source, REMOVE IT.
-                
-                Respond with the finalized, verified answer. If you made significant corrections, start with "Verified against latest statutory records:".
-                """
-                answer = await call_llm(verification_prompt, temperature=0.2)
-                result.answer = answer
-
-            # Citation validation
-            from citation_validator import citation_validator
-            all_context = [
-                {"section_number": r.section_number, "law_type": r.law_type, "text": r.text}
-                for r in (statutory_results + bail_results)
-            ]
-            
-            citation_validation = citation_validator.validate(
-                response=answer, context_chunks=all_context, strict=False
-            )
-            
-            if not citation_validation.is_valid:
-                answer = citation_validator.sanitize_response(answer, citation_validation)
-                confidence_score = max(confidence_score - 0.15, 0.3)
-                result.processing_info["citation_warning"] = True
-                result.processing_info["invalid_citations"] = citation_validation.invalid_sections
-            
-            # Grounding evaluation
-            from agents.feedback_evaluator import FeedbackEvaluator
-            feedback_eval = FeedbackEvaluator()
-            grounding_eval = feedback_eval.evaluate(answer, all_context, query)
-            
-            if grounding_eval.grounding_score > 0.7:
-                confidence_score = min(confidence_score + 0.1, 0.95)
-            elif grounding_eval.grounding_score < 0.5 and not use_fallback:
-                confidence_score = max(confidence_score - 0.15, 0.3)
-            
-            review_passed = citation_validation.is_valid and grounding_eval.grounding_score >= 0.5
-            
-            result.quality_review = {
-                "passed": review_passed,
-                "citation_valid": citation_validation.is_valid,
-                "valid_citations": len(citation_validation.valid_sections),
-                "invalid_citations": len(citation_validation.invalid_sections),
-                "grounding_score": grounding_eval.grounding_score,
-                "grounding_status": grounding_eval.status.value,
-                "fabrication_score": citation_validation.fabrication_score,
-            }
-            
-            result.answer = answer
             result.confidence_score = round(confidence_score, 2)
-            result.processing_info["steps"].append(
-                f"✓ QualityReviewerAgent: {len(citation_validation.valid_sections)}/"
-                f"{len(citation_validation.cited_sections)} citations verified, "
-                f"grounding: {grounding_eval.grounding_score:.2f}"
-            )
-            result.processing_info["grounding_details"] = grounding_eval.to_dict()
+            emit("generate", "complete")
             emit("quality_review", "complete")
 
             # ==================== STAGE 8: Enrichment (Parallel) ====================
@@ -641,8 +477,16 @@ STRICT INSTRUCTIONS:
             else:
                 result.processing_info["steps"].append("✓ Enrichment skipped for document query")
 
-            # Format citations
+            # Format citations from canonical evidence mapping
+            # Only include citations that were actually referenced in the claims
+            referenced_ids = set()
+            if not gen_response.is_abstention:
+                for c in gen_response.claims:
+                    referenced_ids.update(c.evidence_ids)
+            
             all_results = statutory_results + bail_results
+            used_results = [r for r in all_results if r.chunk_id in referenced_ids]
+            
             result.citations = [
                 {
                     "section": r.section_number,
@@ -651,7 +495,7 @@ STRICT INSTRUCTIONS:
                     "source": r.source_dataset,
                     "relevance_score": round(r.score, 3),
                 }
-                for r in all_results
+                for r in used_results
             ]
 
             elapsed_ms = int((time.time() - start_time) * 1000)

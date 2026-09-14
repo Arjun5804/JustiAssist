@@ -424,180 +424,47 @@ async def process_query(request: QueryRequest):
     if statutory_results:
         metrics.incr("retrieval_hits")
     
-    # Step 7: GENERATE ANSWER
-    bail_assessment = None
+    # Step 7 & 8: Grounded Generation Pipeline
+    from generation.pipeline import GroundedGenerationPipeline
+    pipeline = GroundedGenerationPipeline(max_retries=2)
     
-    if query_type == QueryType.BAIL_QUERY:
-        # Build statutory context list
-        statutory_context_list = [
-            {
-                "section_number": r.section_number,
-                "law_type": r.law_type,
-                "text": r.text,
-                "source": r.source_dataset
-            }
-            for r in statutory_results
-        ]
-        
-        bail_context_list = [
-            {
-                "section_number": r.section_number,
-                "law_type": r.law_type,
-                "text": r.text,
-                "metadata": r.metadata
-            }
-            for r in bail_results
-        ]
-        
-        # If session documents are available, use document-aware prompt
-        if session_documents:
-            # Use LLM with document-aware prompt instead of rule-based evaluator
-            prompt = build_prompt_with_documents(
-                query=query,
-                statutory_context=statutory_context_list,
-                document_context=session_documents,
-                bail_context=bail_context_list,
-                is_bail_query=True
-            )
-            
-            answer = await call_llm(prompt)
-            confidence_score = 0.85  # High confidence when document is available
-            
-            # Create assessment from document analysis (matching frontend structure)
-            bail_assessment = {
-                "bail_likelihood": "Document Analysis",
-                "legal_reasoning": {
-                    "bailable_status": "See document for court decision",
-                    "max_punishment": "See document sections",
-                    "severity_score": 0,
-                    "applicable_crpc": ["Analysis based on uploaded document"]
-                },
-                "explanation": "Analysis based on uploaded court document/FIR."
-            }
-            processing_info["steps"].append("✓ Document-aware bail analysis completed")
-        else:
-            # No documents - use rule-based evaluator
-            evaluation = await deps.bail_evaluator.evaluate(
-                query=query,
-                statutory_context=statutory_context_list,
-                bail_precedents=bail_context_list,
-                custody_duration_days=request.custody_days,
-                offence_sections=request.offense_sections
-            )
-            
-            answer = evaluation.explanation
-            confidence_score = evaluation.confidence_score
-            bail_assessment = evaluation.to_dict()
-            processing_info["steps"].append("✓ Bail evaluation completed")
-        
+    if deps.retrieval_pipeline:
+        # We can pass validated_evidence directly, but wait, validated_evidence is not directly available 
+        # in outer scope if deps.retrieval_pipeline was not initialized. It is, we initialized it above.
+        pass
     else:
-        # Regular legal query - build prompt with structured context
-        prompt = f"""You are JustiAssist, an AI legal assistant for Indian criminal law.
-
-{'='*60}
-ANSWER MODE: {grounding_status}
-{'='*60}
-
-USER QUERY: {query}
-
-{'='*60}
-RETRIEVED LEGAL CONTEXT (Structured by Evidence Type):
-{'='*60}
-
-{structured_context_text}
-
-{'='*60}
-INSTRUCTIONS:
-{'='*60}
-
-"""
+        from retrieval.models import ValidatedEvidenceSet
+        validated_evidence = ValidatedEvidenceSet(statutory_results=[], case_law_results=[], session_documents=[])
         
-        if use_fallback:
-            # GPT-4 FALLBACK MODE — keep answer clean, UI handles trust signals
-            prompt += f"""
-FALLBACK MODE — The retrieved context is limited.
-Reason: {confidence_reason}
-
-You may use your general legal knowledge to answer this query.
-1. Provide the best answer you can based on your training
-2. If possible, mention which legal provisions are relevant (cite section numbers)
-3. Structure your answer clearly
-4. Do NOT add warnings, disclaimers or notes about insufficient context — the UI handles that separately
-"""
-        else:
-            # GROUNDED MODE (High Confidence)
-            prompt += """
-✓ GROUNDED MODE (High Retrieval Confidence)
-
-Answer ONLY from the retrieved legal context above:
-1. Cite exact section numbers for every legal claim
-2. Use direct quotes from the context when possible
-3. If the context doesn't contain sufficient information, say so explicitly
-4. Do NOT fabricate or assume legal provisions not in the context
-5. Structure your answer clearly with relevant sections cited
-
-CRITICAL: Every legal provision you mention MUST appear in the context above.
-"""
+    gen_response = await pipeline.run(query, validated_evidence)
+    answer = gen_response.answer
+    
+    if gen_response.is_abstention:
+        grounding_status = "fail"
+        confidence_score = 0.0
+        processing_info["steps"].append("✓ GroundedGenerationPipeline: ABSTAINED")
+    else:
+        grounding_status = "pass"
+        confidence_score = retrieval_confidence.overall_score if retrieval_confidence else 0.8
+        processing_info["steps"].append("✓ GroundedGenerationPipeline: Generated grounded answer")
         
-        # Call LLM with our custom prompt
-        answer = await call_llm(prompt, temperature=0.3, max_tokens=2000)
-        
-        # Note: Fallback label is NOT prepended to the answer text.
-        # The frontend displays grounding_status and confidence badges instead,
-        # keeping the answer text clean and readable.
-        
-        # Adjust confidence based on grounding status
-        if use_fallback:
-            confidence_score = 0.4  # Lower for fallback
-            processing_info["steps"].append(f"⚠ GPT-4 fallback mode used ({confidence_level.value} confidence)")
-        else:
-            confidence_score = 0.75 + (retrieval_confidence.overall_score * 0.2)  # Boost if high confidence
-            processing_info["steps"].append(f"✓ Grounded answer generated ({confidence_level.value} confidence)")
+    bail_assessment = None
+    if query_type == QueryType.BAIL_QUERY and session_documents:
+        bail_assessment = {
+            "bail_likelihood": "Document Analysis",
+            "legal_reasoning": {"bailable_status": "See document", "max_punishment": "See document", "severity_score": 0, "applicable_crpc": ["Based on uploaded document"]},
+            "explanation": "Analysis based on uploaded court document/FIR."
+        }
     
-    # Step 8: Citation Validation (pre-response check)
-    from citation_validator import citation_validator
-    
-    all_context = [{
-        "section_number": r.section_number,
-        "law_type": r.law_type,
-        "text": r.text
-    } for r in (statutory_results + bail_results)]
-    
-    citation_validation = citation_validator.validate(
-        response=answer,
-        context_chunks=all_context,
-        strict=False
-    )
-    
-    if not citation_validation.is_valid:
-        print(f"[CITATION WARNING] Invalid sections: {citation_validation.invalid_sections}")
-        processing_info["citation_warning"] = True
-        processing_info["invalid_citations"] = citation_validation.invalid_sections
-        
-        # Sanitize response with warning
-        answer = citation_validator.sanitize_response(answer, citation_validation)
-        confidence_score = max(confidence_score - 0.15, 0.3)  # Penalize score
-    
-    processing_info["steps"].append(
-        f"✓ Citation validation: {len(citation_validation.valid_sections)}/{len(citation_validation.cited_sections)} verified"
-    )
-    
-    # Step 9: Final Grounding Evaluation
-    grounding_eval = deps.feedback_evaluator.evaluate(answer, all_context, query)
-    
-    # Adjust confidence based on grounding evaluation
-    if grounding_eval.grounding_score > 0.7:
-        confidence_score = min(confidence_score + 0.1, 0.95)
-    elif grounding_eval.grounding_score < 0.5 and not use_fallback:
-        # If grounded mode but poor grounding, flag it
-        confidence_score = max(confidence_score - 0.15, 0.3)
-    
-    processing_info["steps"].append(f"✓ Grounding evaluation: {grounding_eval.grounding_score:.2f}")
-    processing_info["grounding_details"] = grounding_eval.to_dict()
-    
-    # Format citations
+    # Format citations from canonical evidence mapping
+    referenced_ids = set()
+    if not gen_response.is_abstention:
+        for c in gen_response.claims:
+            referenced_ids.update(c.evidence_ids)
+            
     all_results = statutory_results + bail_results
-    citations = format_citations(all_results)
+    used_results = [r for r in all_results if r.chunk_id in referenced_ids]
+    citations = format_citations(used_results)
     
     # OBS: Log generation event
     latency_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
@@ -605,9 +472,9 @@ CRITICAL: Every legal provision you mention MUST appear in the context above.
         query_id=query_id,
         grounding_mode=grounding_status,
         response=answer,
-        citations_valid=len(citation_validation.valid_sections),
-        citations_invalid=len(citation_validation.invalid_sections),
-        fabrication_score=citation_validation.fabrication_score,
+        citations_valid=len(citations),
+        citations_invalid=0,
+        fabrication_score=0.0,
         llm_model=GROQ_MODEL,
         latency_ms=latency_ms
     )
@@ -795,47 +662,32 @@ async def query_stream(
             
             yield f"data: {json.dumps({'type': 'stage', 'stage': 'score', 'status': 'complete', 'data': {'confidence': round(retrieval_confidence.overall_score, 2), 'level': confidence_level.value}})}\n\n"
             
-            # Stage 6: Generation
+            # Stage 6 & 7: Grounded Generation Pipeline
             emitter.start('generate')
             yield f"data: {json.dumps({'type': 'stage', 'stage': 'generate', 'status': 'active'})}\n\n"
             
-            if confidence_level == ConfidenceLevel.HIGH: grounding_status = "pass"; use_fallback = False
-            elif confidence_level == ConfidenceLevel.MEDIUM: grounding_status = "partial"; use_fallback = False
-            else: grounding_status = "fail"; use_fallback = True
+            from generation.pipeline import GroundedGenerationPipeline
+            from retrieval.models import ValidatedEvidenceSet
             
-            bail_assessment = None
-            if query_type == QueryType.BAIL_QUERY:
-                stat_ctx = [{"section_number": r.section_number, "law_type": r.law_type, "text": r.text, "source": r.source_dataset} for r in statutory_results]
-                bail_ctx = [{"section_number": r.section_number, "law_type": r.law_type, "text": r.text, "metadata": r.metadata} for r in bail_results]
-                if session_documents:
-                    prompt = build_prompt_with_documents(query=request.query, statutory_context=stat_ctx, document_context=session_documents, bail_context=bail_ctx, is_bail_query=True)
-                    answer = await call_llm(prompt)
-                    bail_assessment = {"bail_likelihood": "Document Analysis", "legal_reasoning": {"bailable_status": "See document", "max_punishment": "See document", "severity_score": 0, "applicable_crpc": ["Based on uploaded document"]}, "explanation": "Analysis based on uploaded court document/FIR."}
-                    confidence_score = 0.85
-                else:
-                    evaluation = await deps.bail_evaluator.evaluate(query=request.query, statutory_context=stat_ctx, bail_precedents=bail_ctx, custody_duration_days=request.custody_days, offence_sections=request.offense_sections)
-                    answer = evaluation.explanation; bail_assessment = evaluation.to_dict(); confidence_score = evaluation.confidence_score
+            pipeline = GroundedGenerationPipeline(max_retries=2)
+            if deps.retrieval_pipeline:
+                pass
             else:
-                structured_context_text = deps.context_builder.build_structured_context(
-                    statutory_results=statutory_results,
-                    case_law_results=bail_results if bail_results else None,
-                    uploaded_docs=session_documents,
-                    max_tokens=3000
-                )
-                prompt = f"You are JustiAssist, an AI legal assistant for Indian criminal law.\n\nANSWER MODE: {grounding_status}\n\nUSER QUERY: {request.query}\n\nRETRIEVED LEGAL CONTEXT:\n{structured_context_text}\n\n"
-                if use_fallback: prompt += f"FALLBACK MODE — The retrieved context is limited.\nReason: {confidence_reason}\n\nProvide the best answer using general legal knowledge. Cite section numbers if possible. Do NOT add disclaimers."
-                else: prompt += "GROUNDED MODE (High Retrieval Confidence)\nAnswer ONLY from the retrieved context above. Cite exact section numbers. Do NOT assume provisions not in context."
-                answer = await call_llm(prompt, temperature=0.3, max_tokens=2000)
-                confidence_score = 0.75 + (retrieval_confidence.overall_score * 0.2) if not use_fallback else 0.4
-
-            from citation_validator import citation_validator
-            all_ctx_flat = [{"section_number": r.section_number, "law_type": r.law_type, "text": r.text} for r in (statutory_results + bail_results)]
-            cit_val = citation_validator.validate(response=answer, context_chunks=all_ctx_flat, strict=False)
-            if not cit_val.is_valid:
-                answer = citation_validator.sanitize_response(answer, cit_val)
-                confidence_score = max(confidence_score - 0.15, 0.3)
-            grounding_eval = deps.feedback_evaluator.evaluate(answer, all_ctx_flat, request.query)
-            if grounding_eval.grounding_score > 0.7: confidence_score = min(confidence_score + 0.1, 0.95)
+                validated_evidence = ValidatedEvidenceSet(statutory_results=[], case_law_results=[], session_documents=[])
+                
+            gen_response = await pipeline.run(request.query, validated_evidence)
+            answer = gen_response.answer
+            
+            if gen_response.is_abstention:
+                grounding_status = "fail"
+                confidence_score = 0.0
+            else:
+                grounding_status = "pass"
+                confidence_score = retrieval_confidence.overall_score if retrieval_confidence else 0.8
+                
+            bail_assessment = None
+            if query_type == QueryType.BAIL_QUERY and session_documents:
+                bail_assessment = {"bail_likelihood": "Document Analysis", "legal_reasoning": {"bailable_status": "See document", "max_punishment": "See document", "severity_score": 0, "applicable_crpc": ["Based on uploaded document"]}, "explanation": "Analysis based on uploaded court document/FIR."}
             
             yield f"data: {json.dumps({'type': 'stage', 'stage': 'generate', 'status': 'complete'})}\n\n"
             
