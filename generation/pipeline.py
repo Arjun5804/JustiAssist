@@ -31,7 +31,11 @@ class GroundedGenerationPipeline:
     ) -> GeneratedResponse:
         
         # Fast exit if no evidence
-        if not evidence.statutory_results and not evidence.case_law_results:
+        if (
+            not evidence.statutory_results 
+            and not evidence.case_law_results
+            and not evidence.session_documents
+        ):
             return GeneratedResponse(
                 answer="The available retrieved evidence does not sufficiently support a reliable answer.",
                 claims=[],

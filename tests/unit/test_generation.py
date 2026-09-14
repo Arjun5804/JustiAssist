@@ -196,3 +196,51 @@ async def test_verifier_invalid_session_document_id(session_evidence):
     
     assert len(results) == 1
     assert results[0].verdict == VerificationVerdict.INVALID_REFERENCE
+
+@pytest.mark.asyncio
+async def test_pipeline_document_only_evidence():
+    pipeline = GroundedGenerationPipeline(max_retries=2)
+
+    document_evidence = ValidatedEvidenceSet(
+        statutory_results=[],
+        case_law_results=[],
+        session_documents=[
+            {
+                "chunk_id": "doc_chunk_1",
+                "filename": "uploaded_fir.pdf",
+                "text": "The accused was seen at the crime scene.",
+                "document_type": "FIR",
+                "score": 0.95,
+            }
+        ],
+    )
+
+    pipeline.generator.generate_response = AsyncMock(
+        return_value=GeneratedResponse(
+            answer="The accused was seen at the crime scene.",
+            claims=[
+                Claim(
+                    claim_id="c1",
+                    text="The accused was seen at the crime scene.",
+                    evidence_ids=["doc_chunk_1"],
+                )
+            ],
+        )
+    )
+
+    pipeline.verifier.verify_claims = AsyncMock(
+        return_value=[
+            ClaimVerification(
+                claim_id="c1",
+                verdict=VerificationVerdict.SUPPORTED,
+                evidence_ids=["doc_chunk_1"],
+            )
+        ]
+    )
+
+    result = await pipeline.run("Where was the accused seen?", document_evidence)
+
+    assert not result.is_abstention
+    assert result.answer == "The accused was seen at the crime scene."
+    assert pipeline.generator.generate_response.call_count == 1
+    assert pipeline.verifier.verify_claims.call_count == 1
