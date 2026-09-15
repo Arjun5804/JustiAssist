@@ -177,21 +177,26 @@ async def test_document_list_fallback(mock_session_manager, mock_get_db, mock_ca
     mock_cache.get.assert_called_once_with("justiassist:v1:docs:session:1:session1")
     mock_cache.set.assert_called_once_with("justiassist:v1:docs:session:1:session1", res, ttl=1800)
 
-@patch("services.chat_memory.cache")
+@patch("services.chat_memory.cache.redis")
 @patch("services.chat_memory.get_db_session")
-async def test_db_write_succeeds_despite_invalidation_failure(mock_get_db, mock_cache):
-    mock_cache.delete = AsyncMock(side_effect=Exception("Redis down!"))
+async def test_db_write_succeeds_despite_invalidation_failure(mock_get_db, mock_redis):
+    # Ensure cache is considered enabled and initialized
+    from services.chat_memory import cache
+    cache.enabled = True
+    cache.redis = mock_redis
+    mock_redis.delete = AsyncMock(side_effect=Exception("Redis down!"))
     
     mock_db = MagicMock()
     mock_get_db.return_value = mock_db
     
     # Mock clear history to simulate deletion
-    mock_query = mock_db.query.return_value.filter.return_value
-    mock_query.count.return_value = 1
+    mock_filter1 = mock_db.query.return_value.filter.return_value
+    mock_filter2 = mock_filter1.filter.return_value
+    mock_filter2.count.return_value = 1
     
     from services.chat_memory import clear_history
     count = await clear_history(user_id=1, conversation_id="conv1")
     
     assert count == 1
     mock_db.commit.assert_called_once()
-    mock_cache.delete.assert_called() # despite exception, execution continued to return count
+    mock_redis.delete.assert_called() # despite exception, execution continued to return count
