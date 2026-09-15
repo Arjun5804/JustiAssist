@@ -27,6 +27,9 @@ class GroundedGenerator:
         for item in evidence.case_law_results:
             text_parts.append(f"[Evidence ID: {item.chunk_id}]\nSection: {item.section_number}\nSource: {item.source_dataset}\n{item.text}\n")
             
+        for item in getattr(evidence, 'external_results', []):
+            text_parts.append(f"[Evidence ID: {item.chunk_id}]\nSection: {item.section_number}\nSource: {item.source_dataset}\n{item.text}\n")
+            
         for doc in evidence.session_documents:
             chunk_id = doc.get("chunk_id", "unknown_chunk")
             text = doc.get("text", "")

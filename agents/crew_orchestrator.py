@@ -353,8 +353,7 @@ class JustiAssistCrew:
                 "level": confidence_level.value if confidence_level else "unknown"
             })
 
-            # ==================== STAGE 5: WebIntelAgent (Parallel Verification) ====================
-            web_context = ""
+            # ==================== STAGE 5: External Retrieval & Source Governance ====================
             
             # CRITICAL UPDATE: Always verify if:
             # 1. It's a new law (BNS/BNSS/BSA)
@@ -369,39 +368,76 @@ class JustiAssistCrew:
             domain_mismatch = False
             if statutory_results:
                 top_result_text = statutory_results[0].text.lower()
-                # If query is about elections but top result is motor vehicles/public servants
                 if "election" in query.lower() and "election" not in top_result_text:
                     domain_mismatch = True
             
-            if use_fallback or is_new_law or is_election_or_special or domain_mismatch:
+            trigger_web_search = use_fallback or is_new_law or is_election_or_special or domain_mismatch
+            fetch_kanoon = (query_type != QueryType.DOCUMENT_QUERY)
+            fetch_news = (query_type != QueryType.DOCUMENT_QUERY)
+            
+            if trigger_web_search or fetch_kanoon or fetch_news:
                 emit("web_search", "active")
                 result.agents_used.append("WebIntelAgent")
-                
-                # Update processing info to reflect verification mode
-                reason = "Domain Mismatch" if domain_mismatch else ("New Law" if is_new_law else "Special Rule")
-                result.processing_info["steps"].append(f"✓ WebIntelAgent: Running verification for {reason}")
+                result.processing_info["steps"].append("✓ ExternalRetriever: Fetching external evidence")
                 
                 try:
-                    # Clean query for Firecrawl
-                    logger.info(f"[CrewAI] AGENT_TRIGGER: Firecrawl search initiated for: {query}")
-                    web_result = await asyncio.to_thread(self._firecrawl_search, query)
-                    if web_result:
-                        web_context = web_result
-                        result.sources_used.append("firecrawl_web")
-                        result.web_sources.append({
-                            "type": "firecrawl_search",
-                            "query": query,
-                            "content_preview": web_result[:200]
-                        })
-                        logger.info(f"[CrewAI] Web verification found {len(web_result)} chars of context")
-                        # DEBUG: Print first 500 chars to console for verification
-                        print(f"\n{'#'*40}\nFIRECRAWL DEBUG OUTPUT:\n{web_result[:500]}\n{'#'*40}\n")
-                        result.processing_info["steps"].append("✓ WebIntelAgent: Retrieved supplementary web context")
+                    from retrieval.external import ExternalRetriever
+                    external_results = await ExternalRetriever.retrieve(
+                        query=query,
+                        requested_sections=requested_sections[:2] if requested_sections else [],
+                        trigger_web_search=trigger_web_search,
+                        fetch_kanoon=fetch_kanoon,
+                        fetch_news=fetch_news
+                    )
+                    
+                    if external_results:
+                        if not hasattr(evidence, 'external_results'):
+                            evidence.external_results = []
+                        evidence.external_results.extend(external_results)
+                        
+                        # Re-validate to ensure clean evidence boundaries
+                        from retrieval.evidence import EvidenceValidator
+                        validator = EvidenceValidator()
+                        evidence = validator.validate(evidence)
+                        
+                        # Populate UI fields
+                        for r in external_results:
+                            if r.dataset_type == "external_web":
+                                if "firecrawl_web" not in result.sources_used:
+                                    result.sources_used.append("firecrawl_web")
+                                result.web_sources.append({
+                                    "type": "firecrawl_search",
+                                    "query": query,
+                                    "content_preview": r.text[:200]
+                                })
+                            elif r.dataset_type == "indian_kanoon":
+                                if "indian_kanoon" not in result.sources_used:
+                                    result.sources_used.append("indian_kanoon")
+                                result.kanoon_cases.append({
+                                    "title": r.metadata.get("title", ""),
+                                    "citation": r.metadata.get("citation", ""),
+                                    "court": r.metadata.get("court", ""),
+                                    "date": r.provenance.source_date if r.provenance else "",
+                                    "url": r.metadata.get("url", ""),
+                                    "preview": r.text[:150]
+                                })
+                            elif r.dataset_type == "legal_news":
+                                if "legal_news" not in result.sources_used:
+                                    result.sources_used.append("legal_news")
+                                result.news_context.append({
+                                    "title": r.metadata.get("title", ""),
+                                    "source": r.metadata.get("source", ""),
+                                    "date": r.provenance.source_date if r.provenance else "",
+                                    "url": r.metadata.get("url", "")
+                                })
+                                
+                        result.processing_info["steps"].append(f"✓ ExternalRetriever: Retrieved {len(external_results)} external sources")
                     else:
-                        result.processing_info["steps"].append("⚠ WebIntelAgent: No web results available")
+                        result.processing_info["steps"].append("⚠ ExternalRetriever: No external results available")
                 except Exception as e:
-                    result.processing_info["steps"].append(f"⚠ WebIntelAgent: {str(e)}")
-                
+                    logger.warning(f"[CrewAI] External retrieval error: {e}", exc_info=True)
+                    result.processing_info["steps"].append(f"⚠ ExternalRetriever: {str(e)}")
+                    
                 emit("web_search", "complete")
 
             # ==================== STAGE 6 & 7: Grounded Generation Pipeline ====================
@@ -429,46 +465,9 @@ class JustiAssistCrew:
             emit("generate", "complete")
             emit("quality_review", "complete")
 
-            # ==================== STAGE 8: Enrichment (Parallel) ====================
-            if query_type != QueryType.DOCUMENT_QUERY:
-                try:
-                    from services.indian_kanoon import get_kanoon_api
-                    from services.news_scraper import get_news_scraper
-                    
-                    search_sections = requested_sections[:2] if requested_sections else []
-                    
-                    async def fetch_kanoon():
-                        try:
-                            api = get_kanoon_api()
-                            if api.api_key:
-                                kq = " ".join(search_sections) + " bail judgment" if search_sections else query[:50]
-                                res = await asyncio.wait_for(api.search(kq, doc_type="judgments"), timeout=3.0)
-                                return [{"title": d.title, "citation": d.citation, "court": d.court, "date": d.date, "url": d.url, "preview": (d.headline or "")[:150]} for d in res.documents[:3]]
-                        except:
-                            pass
-                        return []
-                    
-                    async def fetch_news():
-                        try:
-                            scraper = get_news_scraper()
-                            nq = " ".join(search_sections) + " India law" if search_sections else "Indian law " + query[:30]
-                            articles = await asyncio.to_thread(scraper.get_news, nq)
-                            return [{"title": a.get("title", ""), "source": a.get("source", "Unknown"), "date": a.get("published date", ""), "url": a.get("url", "")} for a in articles[:2]]
-                        except:
-                            pass
-                        return []
-                    
-                    kanoon_cases, news_items = await asyncio.gather(fetch_kanoon(), fetch_news())
-                    
-                    if kanoon_cases:
-                        result.kanoon_cases = kanoon_cases
-                        result.sources_used.append("indian_kanoon")
-                    if news_items:
-                        result.news_context = news_items
-                        result.sources_used.append("legal_news")
-                except Exception as e:
-                    logger.warning(f"[CrewAI] Enrichment error: {e}")
-            else:
+            # ==================== STAGE 8: Enrichment ====================
+            # Kanoon and News are now fetched in Stage 5 as external evidence.
+            if query_type == QueryType.DOCUMENT_QUERY:
                 result.processing_info["steps"].append("✓ Enrichment skipped for document query")
 
             # Format citations from canonical evidence mapping

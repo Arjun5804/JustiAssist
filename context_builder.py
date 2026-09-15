@@ -62,6 +62,7 @@ class ContextBuilder:
         self,
         statutory_results: List[Any],
         case_law_results: List[Any] = None,
+        external_results: List[Any] = None,
         uploaded_docs: List[Any] = None,
         max_tokens: int = 3000
     ) -> Tuple[str, Dict[str, Any]]:
@@ -71,6 +72,7 @@ class ContextBuilder:
         Args:
             statutory_results: Results from statutory index search
             case_law_results: Results from case law index search (optional)
+            external_results: Results from external web/news/kanoon (optional)
             uploaded_docs: User-uploaded document chunks (optional)
             max_tokens: Maximum context length in tokens (approximate by chars * 0.25)
             
@@ -80,7 +82,7 @@ class ContextBuilder:
             - Dictionary mapping canonical evidence_id to provenance/metadata
         """
         # Group chunks by evidence type and law type
-        groups = self._group_chunks(statutory_results, case_law_results, uploaded_docs)
+        groups = self._group_chunks(statutory_results, case_law_results, external_results, uploaded_docs)
         
         # Sort groups by priority
         sorted_groups = sorted(
@@ -135,6 +137,7 @@ class ContextBuilder:
         self,
         statutory_results: List[Any],
         case_law_results: List[Any] = None,
+        external_results: List[Any] = None,
         uploaded_docs: List[Any] = None
     ) -> Dict[str, ContextGroup]:
         """Group chunks by evidence type and law type"""
@@ -168,7 +171,7 @@ class ContextBuilder:
             for result in case_law_results:
                 law_type = getattr(result, 'law_type', 'Other')
                 
-                # Determine court level from metadata or source
+                # Determine court level from metadata or text
                 court_level = self._determine_court_level(result)
                 group_key = f"case_law_{court_level}"
                 
@@ -181,6 +184,30 @@ class ContextBuilder:
                 groups[group_key].add_chunk({
                     'chunk_id': getattr(result, 'chunk_id', None),
                     'section_number': getattr(result, 'section_number', 'Case'),
+                    'text': getattr(result, 'text', ''),
+                    'source': getattr(result, 'source_dataset', 'Unknown'),
+                    'score': getattr(result, 'score', 0.0),
+                    'metadata': getattr(result, 'metadata', {}),
+                    'is_authoritative': False,
+                    'original_result': result
+                })
+        
+        # Process external results
+        if external_results:
+            for result in external_results:
+                dataset_type = getattr(result, 'dataset_type', 'external')
+                law_type = getattr(result, 'law_type', 'External')
+                
+                group_key = f"external_{dataset_type}"
+                if group_key not in groups:
+                    groups[group_key] = ContextGroup(
+                        group_type='external',
+                        law_type=law_type
+                    )
+                    
+                groups[group_key].add_chunk({
+                    'chunk_id': getattr(result, 'chunk_id', None),
+                    'section_number': getattr(result, 'section_number', 'External'),
                     'text': getattr(result, 'text', ''),
                     'source': getattr(result, 'source_dataset', 'Unknown'),
                     'score': getattr(result, 'score', 0.0),
@@ -281,6 +308,8 @@ class ContextBuilder:
             header = f"═══ STATUTORY PROVISIONS: {group.law_type.upper()} ═══"
         elif group.group_type == 'case_law':
             header = f"═══ CASE LAW PRECEDENTS: {group.law_type} ═══"
+        elif group.group_type == 'external':
+            header = f"═══ EXTERNAL SOURCES: {group.law_type.upper()} ═══"
         elif group.group_type == 'uploaded':
             header = f"═══ USER-UPLOADED DOCUMENTS (NON-STATUTORY EVIDENCE) ═══"
         else:
@@ -324,11 +353,14 @@ class ContextBuilder:
         total_chunks = sum(len(g.chunks) for g in groups.values())
         statutory_count = sum(len(g.chunks) for g in groups.values() if g.group_type == 'statutory')
         case_law_count = sum(len(g.chunks) for g in groups.values() if g.group_type == 'case_law')
+        external_count = sum(len(g.chunks) for g in groups.values() if g.group_type == 'external')
         uploaded_count = sum(len(g.chunks) for g in groups.values() if g.group_type == 'uploaded')
         
         footer = f"─── Context Summary ───\n"
         footer += f"Total Chunks: {total_chunks} "
         footer += f"(Statutory: {statutory_count}, Case Law: {case_law_count}"
+        if external_count > 0:
+            footer += f", External: {external_count}"
         if uploaded_count > 0:
             footer += f", User Docs: {uploaded_count}"
         footer += ")"

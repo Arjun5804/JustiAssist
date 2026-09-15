@@ -425,7 +425,71 @@ async def process_query(request: QueryRequest):
     metrics.incr(f"confidence_{confidence_level.value}")
     if statutory_results:
         metrics.incr("retrieval_hits")
+    # Step 6.5: External Retrieval & Source Governance
+    is_new_law = any(x in query.lower() for x in ["bns", "bnss", "bsa", "bharatiya"])
+    is_election_or_special = any(x in query.lower() for x in ["election", "voter", "conduct of election", "pmla", "ndps"])
+    domain_mismatch = False
+    if statutory_results:
+        top_result_text = statutory_results[0].text.lower()
+        if "election" in query.lower() and "election" not in top_result_text:
+            domain_mismatch = True
+            
+    trigger_web_search = use_fallback or is_new_law or is_election_or_special or domain_mismatch
+    fetch_kanoon = (query_type != QueryType.DOCUMENT_QUERY)
+    fetch_news = (query_type != QueryType.DOCUMENT_QUERY)
     
+    kanoon_cases = []
+    news_context = []
+    sources_used = ["local_vectors"]
+    fetch_times_ms = {}
+    
+    if trigger_web_search or fetch_kanoon or fetch_news:
+        try:
+            from retrieval.external import ExternalRetriever
+            external_results = await ExternalRetriever.retrieve(
+                query=query,
+                requested_sections=requested_sections[:2] if requested_sections else [],
+                trigger_web_search=trigger_web_search,
+                fetch_kanoon=fetch_kanoon,
+                fetch_news=fetch_news
+            )
+            if external_results:
+                if not hasattr(validated_evidence, 'external_results'):
+                    validated_evidence.external_results = []
+                validated_evidence.external_results.extend(external_results)
+                
+                from retrieval.evidence import EvidenceValidator
+                validator = EvidenceValidator()
+                validated_evidence = validator.validate(validated_evidence)
+                
+                for r in external_results:
+                    if r.dataset_type == "external_web":
+                        if "firecrawl_web" not in sources_used:
+                            sources_used.append("firecrawl_web")
+                    elif r.dataset_type == "indian_kanoon":
+                        if "indian_kanoon" not in sources_used:
+                            sources_used.append("indian_kanoon")
+                        kanoon_cases.append({
+                            "title": r.metadata.get("title", ""),
+                            "citation": r.metadata.get("citation", ""),
+                            "court": r.metadata.get("court", ""),
+                            "date": r.provenance.source_date if r.provenance else "",
+                            "url": r.metadata.get("url", ""),
+                            "preview": r.text[:150]
+                        })
+                    elif r.dataset_type == "legal_news":
+                        if "legal_news" not in sources_used:
+                            sources_used.append("legal_news")
+                        news_context.append({
+                            "title": r.metadata.get("title", ""),
+                            "source": r.metadata.get("source", ""),
+                            "date": r.provenance.source_date if r.provenance else "",
+                            "url": r.metadata.get("url", "")
+                        })
+                processing_info["steps"].append(f"✓ Retrieved {len(external_results)} external sources")
+        except Exception as e:
+            print(f"[HYBRID] External retrieval error: {e}")
+
     # Step 7 & 8: Grounded Generation Pipeline
     from generation.pipeline import GroundedGenerationPipeline
     pipeline = GroundedGenerationPipeline(max_retries=2)
@@ -457,6 +521,8 @@ async def process_query(request: QueryRequest):
             referenced_ids.update(c.evidence_ids)
             
     all_results = statutory_results + bail_results
+    if hasattr(validated_evidence, 'external_results'):
+        all_results.extend(validated_evidence.external_results)
     for doc in validated_evidence.session_documents:
         from retrieval.models import SearchResult
         all_results.append(SearchResult(
@@ -503,80 +569,7 @@ async def process_query(request: QueryRequest):
         metrics.incr("responses_fallback")
     else:
         metrics.incr("responses_grounded")
-    
-    # Step 10: HYBRID RETRIEVAL - Fetch from Indian Kanoon and News (parallel, non-blocking)
-    kanoon_cases = []
-    news_context = []
-    sources_used = ["local_vectors"]
-    fetch_times_ms = {}
-    
-    try:
-        from services.indian_kanoon import get_kanoon_api
-        from services.news_scraper import get_news_scraper
-        
-        # Build search query from reformulated sections
-        search_sections = requested_sections if requested_sections else []
-        kanoon_query = " ".join(search_sections[:2]) + " bail judgment" if search_sections else query[:50]
-        
-        # Parallel fetch with timeouts
-        async def fetch_kanoon():
-            try:
-                api = get_kanoon_api()
-                if api.api_key:
-                    import time
-                    start = time.time()
-                    result = await asyncio.wait_for(
-                        api.search(kanoon_query, doc_type="judgments"),
-                        timeout=3.0
-                    )
-                    elapsed = int((time.time() - start) * 1000)
-                    return [{
-                        "title": d.title,
-                        "citation": d.citation,
-                        "court": d.court,
-                        "date": d.date,
-                        "url": d.url,
-                        "preview": (d.headline or "")[:150]
-                    } for d in result.documents[:3]], elapsed
-            except Exception as e:
-                print(f"[HYBRID] Kanoon fetch error: {e}")
-            return [], 0
-        
-        async def fetch_news():
-            try:
-                scraper = get_news_scraper()
-                news_query = " ".join(search_sections[:2]) + " India law" if search_sections else "Indian law " + query[:30]
-                import time
-                start = time.time()
-                articles = await asyncio.to_thread(scraper.get_news, news_query)
-                elapsed = int((time.time() - start) * 1000)
-                return [{
-                    "title": a.get("title", ""),
-                    "source": a.get("source", "Unknown"),
-                    "date": a.get("published date", ""),
-                    "url": a.get("url", "")
-                } for a in articles[:2]], elapsed
-            except Exception as e:
-                print(f"[HYBRID] News fetch error: {e}")
-            return [], 0
-        
-        # Run both in parallel
-        kanoon_result, news_result = await asyncio.gather(fetch_kanoon(), fetch_news())
-        
-        if kanoon_result[0]:
-            kanoon_cases = kanoon_result[0]
-            sources_used.append("indian_kanoon")
-            fetch_times_ms["kanoon"] = kanoon_result[1]
-            processing_info["steps"].append(f"✓ Found {len(kanoon_cases)} relevant cases from Indian Kanoon")
-        
-        if news_result[0]:
-            news_context = news_result[0]
-            sources_used.append("legal_news")
-            fetch_times_ms["news"] = news_result[1]
-            processing_info["steps"].append(f"✓ Found {len(news_context)} relevant news articles")
-    
-    except Exception as e:
-        print(f"[HYBRID] Overall error: {e}")
+    # Kanoon and News are now fetched in Step 6.5 as external evidence.
     
     # Return response with hybrid data
     return QueryResponse(

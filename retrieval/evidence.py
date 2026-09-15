@@ -18,6 +18,7 @@ class EvidenceValidator:
         """
         val_statutory, stat_metadata = self._validate_results(evidence.statutory_results)
         val_case_law, case_metadata = self._validate_results(evidence.case_law_results)
+        val_external, external_metadata = self._validate_results(getattr(evidence, 'external_results', []))
         
         # Session documents are currently List[Dict], we pass them through unchanged for now
         # as they don't use SearchResult yet.
@@ -26,12 +27,14 @@ class EvidenceValidator:
         validation_metadata = {
             "statutory": stat_metadata,
             "case_law": case_metadata,
+            "external": external_metadata,
         }
         
         return ValidatedEvidenceSet(
             statutory_results=val_statutory,
             case_law_results=val_case_law,
             session_documents=val_session,
+            external_results=val_external,
             validation_metadata=validation_metadata
         )
         

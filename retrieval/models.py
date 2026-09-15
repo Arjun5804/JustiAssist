@@ -14,6 +14,7 @@ class Provenance:
     """Provenance metadata for an evidence item."""
     source_authority: AuthorityLevel = AuthorityLevel.UNKNOWN
     source_date: Optional[str] = None
+    retrieved_at: Optional[str] = None
     effective_from: Optional[str] = None
     effective_until: Optional[str] = None
 
@@ -36,6 +37,7 @@ class EvidenceSet:
     statutory_results: List[SearchResult] = field(default_factory=list)
     case_law_results: List[SearchResult] = field(default_factory=list)
     session_documents: List[Dict[str, Any]] = field(default_factory=list)
+    external_results: List[SearchResult] = field(default_factory=list)
 
 @dataclass
 class ValidatedEvidenceSet:
@@ -43,6 +45,7 @@ class ValidatedEvidenceSet:
     statutory_results: List[SearchResult] = field(default_factory=list)
     case_law_results: List[SearchResult] = field(default_factory=list)
     session_documents: List[Dict[str, Any]] = field(default_factory=list)
+    external_results: List[SearchResult] = field(default_factory=list)
     validation_metadata: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass

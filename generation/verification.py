@@ -22,6 +22,8 @@ class ClaimVerifier:
             mapping[item.chunk_id] = item
         for item in evidence.case_law_results:
             mapping[item.chunk_id] = item
+        for item in getattr(evidence, 'external_results', []):
+            mapping[item.chunk_id] = item
         for doc in evidence.session_documents:
             chunk_id = doc.get("chunk_id", "unknown_chunk")
             mapping[chunk_id] = SearchResult(
@@ -107,15 +109,17 @@ CLAIM: "{claim.text}"
 EVIDENCE:
 {evidence_text}
 
-Does the evidence fully support the claim, partially support it, or not support it at all?
+Does the evidence fully support the claim, partially support it, completely contradict it, or not support it at all?
 You must output a JSON object with exactly this format:
 {{
-    "verdict": "SUPPORTED" | "PARTIALLY_SUPPORTED" | "UNSUPPORTED",
+    "verdict": "SUPPORTED" | "PARTIALLY_SUPPORTED" | "UNSUPPORTED" | "CONFLICTING",
     "reason": "Brief explanation of why."
 }}
 
-Do NOT use outside knowledge. If the evidence does not state the claim, it is UNSUPPORTED.
+Do NOT use outside knowledge. 
+If the evidence does not state the claim, it is UNSUPPORTED.
 If the claim goes beyond what is in the evidence, it is PARTIALLY_SUPPORTED or UNSUPPORTED.
+If the evidence explicitly states something contradictory to the claim, it is CONFLICTING.
 """
         
         try:

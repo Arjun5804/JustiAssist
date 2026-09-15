@@ -8,6 +8,8 @@ class VerificationVerdict(str, Enum):
     PARTIALLY_SUPPORTED = "PARTIALLY_SUPPORTED"
     UNSUPPORTED = "UNSUPPORTED"
     INVALID_REFERENCE = "INVALID_REFERENCE"
+    CONFLICTING = "CONFLICTING"
+    UNKNOWN = "UNKNOWN"
 
 @dataclass
 class ClaimVerification:
