@@ -61,6 +61,7 @@ class GroundedGenerationPipeline:
             
             if not unsupported:
                 # All claims supported
+                response.verifications = verifications
                 return response
                 
             if attempt < self.max_retries - 1:

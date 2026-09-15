@@ -68,9 +68,10 @@ graph TD
 - **Hard Invariant**: Only accepts `ValidatedEvidenceSet`.
 
 ### `VerificationAgent`
-- Enforces the strict claim verification boundary.
+- Responsible for the final verification/response gate and citation construction.
+- Consumes the semantic verification results produced by the existing Phase 4 pipeline (via `GroundedGenerationPipeline`). It does **not** duplicate semantic claim verification.
+- Ensures no unsupported or partially-supported claims reach the user.
 - Formats final citations from the validated evidence.
-- Ensures no unsupported claims reach the user.
 
 ## AgentState
 An explicit state object (`AgentState`) travels through the pipeline, containing:

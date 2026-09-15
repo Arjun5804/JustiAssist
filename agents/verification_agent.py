@@ -1,5 +1,6 @@
 from agents.state import Agent, AgentState, AgentResult
 from retrieval.models import SearchResult
+from generation.models import VerificationVerdict
 
 class VerificationAgent(Agent):
     name: str = "VerificationAgent"
@@ -23,6 +24,27 @@ class VerificationAgent(Agent):
             state.grounding_status = "fail"
             state.has_verified = True
             state.processing_info.setdefault("steps", []).append("✓ VerificationAgent: Confirmed abstention")
+            return AgentResult(success=True, state=state)
+            
+        # Hard invariant: check that claims were actually subjected to semantic verification
+        if len(gen_response.claims) > 0 and not gen_response.verifications:
+            state.final_answer = "The available retrieved evidence does not sufficiently support a reliable answer."
+            state.citations = []
+            state.confidence_score = 0.0
+            state.grounding_status = "fail"
+            state.has_verified = True
+            state.processing_info.setdefault("steps", []).append("⚠ VerificationAgent: Rejected response due to missing verification results")
+            return AgentResult(success=True, state=state)
+            
+        # Hard invariant: check that no unsupported claims leaked
+        unsupported = [v for v in gen_response.verifications if v.verdict != VerificationVerdict.SUPPORTED]
+        if unsupported:
+            state.final_answer = "The available retrieved evidence does not sufficiently support a reliable answer."
+            state.citations = []
+            state.confidence_score = 0.0
+            state.grounding_status = "fail"
+            state.has_verified = True
+            state.processing_info.setdefault("steps", []).append("⚠ VerificationAgent: Rejected response due to unsupported claims leaking past generation")
             return AgentResult(success=True, state=state)
             
         # Format citations from canonical evidence mapping
@@ -73,6 +95,6 @@ class VerificationAgent(Agent):
         state.final_answer = gen_response.answer
         state.citations = citations
         state.has_verified = True
-        state.processing_info.setdefault("steps", []).append("✓ VerificationAgent: Verified claims and built citations")
+        state.processing_info.setdefault("steps", []).append("✓ VerificationAgent: Final verification gate passed and citations built")
         
         return AgentResult(success=True, state=state)

@@ -97,7 +97,7 @@ class AgentOrchestrator:
             
         except Exception as e:
             logger.error(f"[AgentOrchestrator] Pipeline error: {e}", exc_info=True)
-            state.final_answer = f"An error occurred during processing: {str(e)}"
+            state.final_answer = "An internal error occurred while processing your request. Please try again."
             state.grounding_status = "fail"
             state.confidence_score = 0.0
             state.citations = []

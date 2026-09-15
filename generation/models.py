@@ -26,3 +26,4 @@ class GeneratedResponse:
     claims: List[Claim] = field(default_factory=list)
     is_abstention: bool = False
     abstention_reason: Optional[str] = None
+    verifications: List[ClaimVerification] = field(default_factory=list)
