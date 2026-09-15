@@ -17,7 +17,7 @@ class RetrievalPipeline:
         extracted_sections: List[str],
         extracted_law_types: List[str],
         session_id: Optional[str] = None
-    ) -> ValidatedEvidenceSet:
+    ) -> EvidenceSet:
         
         evidence = EvidenceSet()
 
@@ -69,9 +69,4 @@ class RetrievalPipeline:
             else:
                 evidence.case_law_results = initial_case_law or []
                 
-        # Validate the EvidenceSet before returning to establish the clean evidence contract
-        from retrieval.evidence import EvidenceValidator
-        validator = EvidenceValidator()
-        validated_evidence = validator.validate(evidence)
-        
-        return validated_evidence
+        return evidence

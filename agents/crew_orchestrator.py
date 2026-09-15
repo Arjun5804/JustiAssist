@@ -295,8 +295,8 @@ class JustiAssistCrew:
                 # or use them. Since process_query gets them passed from api/query.py,
                 # we don't necessarily need to overwrite them.
             else:
-                from retrieval.models import ValidatedEvidenceSet
-                evidence = ValidatedEvidenceSet(statutory_results=[], case_law_results=[], session_documents=[])
+                from retrieval.models import EvidenceSet
+                evidence = EvidenceSet(statutory_results=[], case_law_results=[], session_documents=[])
                 statutory_results = []
                 bail_results = []
             
@@ -395,10 +395,7 @@ class JustiAssistCrew:
                             evidence.external_results = []
                         evidence.external_results.extend(external_results)
                         
-                        # Re-validate to ensure clean evidence boundaries
-                        from retrieval.evidence import EvidenceValidator
-                        validator = EvidenceValidator()
-                        evidence = validator.validate(evidence)
+                        # Evidence boundary validation happens before Stage 6
                         
                         # Populate UI fields
                         for r in external_results:
@@ -447,8 +444,12 @@ class JustiAssistCrew:
             from generation.pipeline import GroundedGenerationPipeline
             
             pipeline = GroundedGenerationPipeline(max_retries=2)
+            # ==================== VALIDATE EVIDENCE ====================
+            from retrieval.evidence import EvidenceValidator
+            validator = EvidenceValidator()
+            validated_evidence = validator.validate(evidence)
                 
-            gen_response = await pipeline.run(query, evidence)
+            gen_response = await pipeline.run(query, validated_evidence)
             
             result.answer = gen_response.answer
             

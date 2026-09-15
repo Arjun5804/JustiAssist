@@ -72,8 +72,6 @@ def test_statutory_retrieval_and_reranking(pipeline, mock_vector_store, mock_rer
     result = evidence.statutory_results[0]
     assert result.chunk_id == mock_reranked_results[0].chunk_id
     assert result.text == mock_reranked_results[0].text
-    assert result.provenance is not None
-    assert result.provenance.source_authority.value == "UNKNOWN"
     assert len(evidence.case_law_results) == 0
 
 def test_statutory_retrieval_balanced(pipeline, mock_vector_store, mock_reranker):

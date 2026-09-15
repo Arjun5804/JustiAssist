@@ -101,6 +101,49 @@ def test_evidence_validator_external_results():
     assert len(validated.external_results) == 1
     assert validated.external_results[0].chunk_id == "ext_web_1"
 
+def test_evidence_validator_boundary():
+    from retrieval.models import EvidenceSet
+    validator = EvidenceValidator()
+    
+    # Raw local evidence
+    stat_sr = SearchResult(
+        chunk_id="stat_1", text="Local stat text", score=0.9, law_type="Statute",
+        section_number="1", source_dataset="BNS", dataset_type="statutory", metadata={},
+        provenance=Provenance(source_authority=AuthorityLevel.PRIMARY_OFFICIAL)
+    )
+    
+    # Valid external evidence
+    ext_valid = SearchResult(
+        chunk_id="ext_web_3", text="Valid external", score=0.0, law_type="Web",
+        section_number="1", source_dataset="Firecrawl", dataset_type="external_web", metadata={},
+        provenance=Provenance(source_authority=AuthorityLevel.TRUSTED_LEGAL)
+    )
+    
+    # Invalid external evidence (missing chunk_id)
+    ext_invalid = SearchResult(
+        chunk_id="", text="Invalid external", score=0.0, law_type="Web",
+        section_number="1", source_dataset="Firecrawl", dataset_type="external_web", metadata={},
+        provenance=Provenance(source_authority=AuthorityLevel.TRUSTED_LEGAL)
+    )
+    
+    evidence = EvidenceSet(
+        statutory_results=[stat_sr],
+        external_results=[ext_valid, ext_invalid]
+    )
+    
+    validated = validator.validate(evidence)
+    
+    # Check that it returns a ValidatedEvidenceSet
+    assert isinstance(validated, ValidatedEvidenceSet)
+    
+    # Local evidence should be present
+    assert len(validated.statutory_results) == 1
+    assert validated.statutory_results[0].chunk_id == "stat_1"
+    
+    # Only valid external evidence should make it through
+    assert len(validated.external_results) == 1
+    assert validated.external_results[0].chunk_id == "ext_web_3"
+
 @pytest.mark.asyncio
 async def test_claim_verifier_conflicting():
     verifier = ClaimVerifier()

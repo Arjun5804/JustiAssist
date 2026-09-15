@@ -21,7 +21,10 @@ Phase 5 addresses the integration of external data sources (Firecrawl, Indian Ka
                  │                       │
                  └──────────┬────────────┘
                             ▼
-                    Evidence Validation
+                       EvidenceSet
+                            │
+                            ▼
+                    EvidenceValidator
                             │
                             ▼
                  ValidatedEvidenceSet
@@ -47,7 +50,8 @@ Every external result is mapped to the `SearchResult` abstraction.
 - Fallback news is explicitly flagged with `is_fallback=True` and filtered out of the legal evidence set completely.
 
 ### 4. Phase 4 Integration
-`external_results` flow natively into `ValidatedEvidenceSet`. The `GroundedGenerationPipeline` treats them as standard evidence. `ClaimVerifier` receives the entire evidence text and can detect `CONFLICTING` material. If the system cannot resolve the conflict natively, it abstains.
+The outputs from local and external retrieval are combined into a single raw `EvidenceSet`. 
+This `EvidenceSet` then passes through `EvidenceValidator`, producing a `ValidatedEvidenceSet`. The `GroundedGenerationPipeline` treats them as standard evidence. `ClaimVerifier` receives the entire evidence text and can detect `CONFLICTING` material. If the system cannot resolve the conflict natively, it abstains.
 
 ## Out of Scope
 - Temporal legal reasoning (supersession graphs)
