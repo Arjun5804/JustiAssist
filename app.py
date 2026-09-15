@@ -128,10 +128,7 @@ async def lifespan(app: FastAPI):
     )
     print("Agent Orchestrator initialized with 5 native agents")
     
-    # Initialize database
-    from services.database import init_db
-    init_db()
-    print("SQLite database initialized (users + chat history)")
+    # SQLite database will be assumed to be initialized externally via alembic or tests
     
     print("\nJustiAssist v2.0 ready!")
     print("="*60)

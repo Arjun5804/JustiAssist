@@ -97,13 +97,6 @@ class ChatMessage(Base):
         }
 
 
-# ==================== Database Initialization ====================
-
-def init_db():
-    """Create all tables if they don't exist"""
-    Base.metadata.create_all(bind=engine)
-    print("[Database] SQLite tables initialized")
-
 
 def get_db():
     """Get a database session (for FastAPI dependency injection)"""
@@ -119,5 +112,3 @@ def get_db_session():
     return SessionLocal()
 
 
-# Initialize on import
-init_db()

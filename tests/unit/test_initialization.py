@@ -17,9 +17,7 @@ async def test_retrieval_pipeline_wiring():
          patch('app.ConfidenceScorer') as mock_cs_class, \
          patch('retrieval.pipeline.RetrievalPipeline') as mock_rp_class, \
          patch('app.AgentOrchestrator') as mock_crew_class, \
-         patch('app.VECTOR_STORE_PATH') as mock_path, \
-         patch('services.database.init_db'):
-        
+         patch('app.VECTOR_STORE_PATH') as mock_path:
         mock_path.exists.return_value = False
         
         # Mock instance returned by VectorStore()

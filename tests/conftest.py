@@ -1,6 +1,14 @@
 import pytest
 from unittest.mock import patch
 
+@pytest.fixture(autouse=True, scope="session")
+def setup_test_db():
+    """Ensure the database schema exists for tests without relying on app startup."""
+    from config import settings
+    if settings.DATABASE_URL.startswith("sqlite"):
+        from services.database import Base, engine
+        Base.metadata.create_all(bind=engine)
+
 @pytest.fixture
 def mock_vector_store():
     with patch('vector_store.VectorStore.load') as mock_load, \
