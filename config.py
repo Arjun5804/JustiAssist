@@ -1,9 +1,8 @@
 """
 JustiAssist Configuration - 2026-Ready MVP
 """
-import os
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Literal
 from enum import Enum
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, model_validator, SecretStr
@@ -17,7 +16,7 @@ class Settings(BaseSettings):
     
     # Application
     APP_NAME: str = "JustiAssist v2.0"
-    APP_ENV: str = Field(default="development", description="Environment: development, production, testing")
+    APP_ENV: Literal["development", "production", "testing"] = "development"
     DEBUG: bool = False
     
     # Server
@@ -32,7 +31,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = Field(default="sqlite:///justiassist.db")
     
     # LLM (Groq Primary)
-    GROQ_API_KEY: SecretStr = Field(default="")
+    GROQ_API_KEY: SecretStr | None = None
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
     
     # LLM (Ollama Optional)
@@ -40,8 +39,8 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "llama3.2"
     
     # External APIs
-    FIRECRAWL_API_KEY: SecretStr = Field(default="")
-    INDIAN_KANOON_API_KEY: SecretStr = Field(default="")
+    FIRECRAWL_API_KEY: SecretStr | None = None
+    INDIAN_KANOON_API_KEY: SecretStr | None = None
     
     # CORS
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000"

@@ -75,7 +75,7 @@ class IndianKanoonAPI:
             api_key: API key from indiankanoon.org (or set INDIAN_KANOON_API_KEY in settings)
             cache_dir: Directory for caching responses (default: data/kanoon_cache)
         """
-        self.api_key = api_key or (settings.INDIAN_KANOON_API_KEY.get_secret_value() if settings.INDIAN_KANOON_API_KEY else "")
+        self.api_key = api_key or (settings.INDIAN_KANOON_API_KEY.get_secret_value() if settings.INDIAN_KANOON_API_KEY is not None else "")
         
         if not self.api_key:
             logger.warning("Indian Kanoon API key not set. API calls will fail.")

@@ -3,7 +3,6 @@ JustiAssist Authentication Service — JWT + bcrypt
 Handles signup, login, and token validation.
 """
 
-import os
 from datetime import datetime, timedelta
 from typing import Optional
 

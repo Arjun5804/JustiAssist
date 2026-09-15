@@ -4,7 +4,6 @@ Intelligent RAG & Agentic Bail Support System for Indian Legal Domain
 Powered by Native Agents, Firecrawl, and Zero-Hallucination Enforcement
 """
 
-import os
 import tempfile
 import uuid
 from datetime import datetime

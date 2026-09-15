@@ -3,7 +3,6 @@ JustiAssist Database Models — SQLAlchemy + SQLite
 User management, chat history, and audit trails.
 """
 
-import os
 from datetime import datetime
 from pathlib import Path
 

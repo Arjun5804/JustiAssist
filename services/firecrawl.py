@@ -13,7 +13,7 @@ class FirecrawlService:
 
     def _init_firecrawl(self):
         """Check if Firecrawl is available"""
-        api_key = settings.FIRECRAWL_API_KEY.get_secret_value() if settings.FIRECRAWL_API_KEY else ""
+        api_key = settings.FIRECRAWL_API_KEY.get_secret_value() if settings.FIRECRAWL_API_KEY is not None else ""
         if api_key and api_key != "fc-your-api-key-here":
             self._firecrawl_available = True
             logger.info("[FirecrawlService] Firecrawl tool available")
@@ -27,7 +27,7 @@ class FirecrawlService:
             
         try:
             from firecrawl import FirecrawlApp
-            app = FirecrawlApp(api_key=settings.FIRECRAWL_API_KEY.get_secret_value())
+            app = FirecrawlApp(api_key=settings.FIRECRAWL_API_KEY.get_secret_value() if settings.FIRECRAWL_API_KEY is not None else "")
             
             # Use same multi-stage search strategy logic from previous orchestrator
             primary_query = f"India {query} full text definition penalty"

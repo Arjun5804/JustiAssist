@@ -2,7 +2,6 @@
 JustiAssist LLM Provider — Groq-Native with Ollama Fallback
 """
 
-import os
 import asyncio
 import hashlib
 import time
@@ -84,7 +83,7 @@ class LLMProvider:
     
     def _setup_groq(self):
         """Initialize Groq async client."""
-        if settings.GROQ_API_KEY:
+        if settings.GROQ_API_KEY is not None:
             try:
                 from groq import AsyncGroq
                 self._groq_client = AsyncGroq(
