@@ -27,13 +27,17 @@ class VerificationAgent(Agent):
             return AgentResult(success=True, state=state)
             
         # Hard invariant: check that claims were actually subjected to semantic verification
-        if len(gen_response.claims) > 0 and not gen_response.verifications:
+        # and that EVERY claim has exactly ONE corresponding verification result
+        claim_ids = {c.claim_id for c in gen_response.claims}
+        verification_ids = {v.claim_id for v in gen_response.verifications}
+        
+        if claim_ids != verification_ids:
             state.final_answer = "The available retrieved evidence does not sufficiently support a reliable answer."
             state.citations = []
             state.confidence_score = 0.0
             state.grounding_status = "fail"
             state.has_verified = True
-            state.processing_info.setdefault("steps", []).append("⚠ VerificationAgent: Rejected response due to missing verification results")
+            state.processing_info.setdefault("steps", []).append("⚠ VerificationAgent: Rejected response due to incomplete or mismatched verification results")
             return AgentResult(success=True, state=state)
             
         # Hard invariant: check that no unsupported claims leaked

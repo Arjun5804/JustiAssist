@@ -82,7 +82,7 @@ class AgentOrchestrator:
                 
             emit("generate", "complete")
 
-            # 5. Verification Agent (Claim Verification & Final Answer)
+            # 5. Verification Agent (Final Verification Gate & Citations)
             emit("quality_review", "active")
             result = await self.verification_agent.run(state)
             if not result.success:

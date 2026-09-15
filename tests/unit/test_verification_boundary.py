@@ -104,3 +104,73 @@ async def test_abstention(base_state):
     assert len(result.state.citations) == 0
     assert result.state.grounding_status == "fail"
     assert result.state.has_verified
+
+@pytest.mark.asyncio
+async def test_missing_claim_verification(base_state):
+    """Test A: Missing claim verification (c1, c2 -> c1)"""
+    base_state.has_generated = True
+    base_state.generated_response = GeneratedResponse(
+        answer="Answer with 2 claims",
+        claims=[
+            Claim(claim_id="c1", text="statement 1", evidence_ids=["doc1"]),
+            Claim(claim_id="c2", text="statement 2", evidence_ids=["doc1"])
+        ],
+        verifications=[
+            ClaimVerification(claim_id="c1", verdict=VerificationVerdict.SUPPORTED, evidence_ids=["doc1"])
+        ]
+    )
+    
+    agent = VerificationAgent()
+    result = await agent.run(base_state)
+    
+    assert result.success
+    assert "does not sufficiently support" in result.state.final_answer
+    assert result.state.citations == []
+    assert result.state.grounding_status == "fail"
+    assert result.state.has_verified
+
+@pytest.mark.asyncio
+async def test_mismatched_verification_id(base_state):
+    """Test B: Mismatched verification ID (c1 -> c999)"""
+    base_state.has_generated = True
+    base_state.generated_response = GeneratedResponse(
+        answer="Answer with mismatched id",
+        claims=[Claim(claim_id="c1", text="statement", evidence_ids=["doc1"])],
+        verifications=[
+            ClaimVerification(claim_id="c999", verdict=VerificationVerdict.SUPPORTED, evidence_ids=["doc1"])
+        ]
+    )
+    
+    agent = VerificationAgent()
+    result = await agent.run(base_state)
+    
+    assert result.success
+    assert "does not sufficiently support" in result.state.final_answer
+    assert result.state.citations == []
+    assert result.state.grounding_status == "fail"
+    assert result.state.has_verified
+
+@pytest.mark.asyncio
+async def test_complete_supported_verification(base_state):
+    """Test C: Complete supported verification (c1, c2 -> c1, c2)"""
+    base_state.has_generated = True
+    base_state.generated_response = GeneratedResponse(
+        answer="Valid complete answer",
+        claims=[
+            Claim(claim_id="c1", text="statement 1", evidence_ids=["doc1"]),
+            Claim(claim_id="c2", text="statement 2", evidence_ids=["doc1"])
+        ],
+        verifications=[
+            ClaimVerification(claim_id="c1", verdict=VerificationVerdict.SUPPORTED, evidence_ids=["doc1"]),
+            ClaimVerification(claim_id="c2", verdict=VerificationVerdict.SUPPORTED, evidence_ids=["doc1"])
+        ]
+    )
+    
+    agent = VerificationAgent()
+    result = await agent.run(base_state)
+    
+    assert result.success
+    assert result.state.final_answer == "Valid complete answer"
+    assert len(result.state.citations) == 1
+    assert result.state.grounding_status != "fail"
+    assert result.state.has_verified
