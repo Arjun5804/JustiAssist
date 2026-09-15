@@ -435,8 +435,8 @@ async def process_query(request: QueryRequest):
             domain_mismatch = True
             
     trigger_web_search = use_fallback or is_new_law or is_election_or_special or domain_mismatch
-    fetch_kanoon = (query_type != QueryType.DOCUMENT_QUERY)
-    fetch_news = (query_type != QueryType.DOCUMENT_QUERY)
+    fetch_kanoon = (query_type == QueryType.BAIL_QUERY)
+    fetch_news = trigger_web_search
     
     kanoon_cases = []
     news_context = []

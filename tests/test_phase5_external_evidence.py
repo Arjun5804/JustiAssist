@@ -14,6 +14,9 @@ def test_authority_classifier():
     assert AuthorityClassifier.classify("https://unknown.domain.com", "web") == AuthorityLevel.UNKNOWN
     assert AuthorityClassifier.classify("https://indiankanoon.org", "indian_kanoon") == AuthorityLevel.TRUSTED_LEGAL
     assert AuthorityClassifier.classify("https://news.com", "legal_news") == AuthorityLevel.NEWS
+    
+def test_authority_classifier_unsafe():
+    assert AuthorityClassifier.classify("https://india.gov.in.attacker.com", "web") == AuthorityLevel.UNKNOWN
 
 def test_external_evidence_normalizer_firecrawl():
     result = {
@@ -128,3 +131,99 @@ async def test_claim_verifier_conflicting():
         
         assert len(verifications) == 1
         assert verifications[0].verdict == VerificationVerdict.CONFLICTING
+
+@pytest.mark.asyncio
+async def test_claim_verifier_conflicting_non_cited():
+    verifier = ClaimVerifier()
+    
+    with patch("generation.verification.call_llm", new_callable=MagicMock) as mock_llm:
+        mock_llm.return_value = asyncio.Future()
+        mock_llm.return_value.set_result('{"verdict": "CONFLICTING", "reason": "contradicted"}')
+        
+        evidence = ValidatedEvidenceSet(
+            external_results=[
+                SearchResult(
+                    chunk_id="ext_1",
+                    text="The law allows X.",
+                    score=0.0,
+                    law_type="Web",
+                    section_number="1",
+                    source_dataset="Firecrawl",
+                    dataset_type="external_web",
+                    metadata={}
+                ),
+                SearchResult(
+                    chunk_id="ext_2",
+                    text="Wait, the law actually prohibits X completely.",
+                    score=0.0,
+                    law_type="Web",
+                    section_number="1",
+                    source_dataset="Firecrawl",
+                    dataset_type="external_web",
+                    metadata={}
+                )
+            ]
+        )
+        
+        # claim only cites ext_1
+        claim = Claim(claim_id="c1", text="The law allows X.", evidence_ids=["ext_1"])
+        
+        verifications = await verifier.verify_claims([claim], evidence)
+        
+        assert len(verifications) == 1
+        assert verifications[0].verdict == VerificationVerdict.CONFLICTING
+        
+        prompt_used = mock_llm.call_args[0][0]
+        assert "[ext_1] The law allows X." in prompt_used
+        assert "[ext_2] Wait, the law actually prohibits X completely." in prompt_used
+
+@pytest.mark.asyncio
+async def test_generation_pipeline_external_only():
+    from generation.pipeline import GroundedGenerationPipeline
+    pipeline = GroundedGenerationPipeline()
+    
+    evidence = ValidatedEvidenceSet(
+        external_results=[
+            SearchResult(
+                chunk_id="ext_1",
+                text="Some text",
+                score=0.0,
+                law_type="Web",
+                section_number="1",
+                source_dataset="Firecrawl",
+                dataset_type="external_web",
+                metadata={},
+                provenance=Provenance(source_authority=AuthorityLevel.TRUSTED_LEGAL)
+            )
+        ]
+    )
+    
+    with patch.object(pipeline.generator, "generate_response", new_callable=MagicMock) as mock_gen, \
+         patch.object(pipeline.verifier, "verify_claims", new_callable=MagicMock) as mock_verify:
+        
+        from generation.models import GeneratedResponse
+        mock_gen.return_value = asyncio.Future()
+        mock_gen.return_value.set_result(GeneratedResponse(answer="Generated text", claims=[], is_abstention=False))
+        
+        mock_verify.return_value = asyncio.Future()
+        mock_verify.return_value.set_result([])
+        
+        response = await pipeline.run("query", evidence)
+        
+        # Should not abstain due to empty evidence
+        assert not (response.is_abstention and response.abstention_reason == "Empty evidence set.")
+
+@pytest.mark.asyncio
+async def test_fallback_news_exclusion():
+    from services.news_scraper import NewsArticle
+    with patch("retrieval.external.get_news_scraper") as mock_scraper_getter:
+        mock_scraper = MagicMock()
+        mock_scraper.fetch_news.return_value = [
+            NewsArticle(title="Fake news", summary="...", url="http", source="src", published_date="date", is_fallback=True),
+            NewsArticle(title="Real news", summary="...", url="http", source="src", published_date="date", is_fallback=False),
+        ]
+        mock_scraper_getter.return_value = mock_scraper
+        
+        articles = await ExternalRetriever._fetch_news("query", [])
+        assert len(articles) == 1
+        assert articles[0]["title"] == "Real news"

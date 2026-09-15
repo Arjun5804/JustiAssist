@@ -25,6 +25,7 @@ class NewsArticle:
     published_date: str
     category: str = "legal"
     vector_id: Optional[str] = None
+    is_fallback: bool = False
 
 class LegalNewsScraper:
     """
@@ -163,6 +164,7 @@ class LegalNewsScraper:
                 url="https://www.livelaw.in/top-stories",
                 source="LiveLaw",
                 published_date=now,
+                is_fallback=True
             ),
             NewsArticle(
                 title="New Bail Guidelines Issued by Delhi High Court",
@@ -170,6 +172,7 @@ class LegalNewsScraper:
                 url="https://www.barandbench.com/news",
                 source="Bar & Bench",
                 published_date=now,
+                is_fallback=True
             ),
             NewsArticle(
                 title="BNS Implementation: Key Changes from IPC",
@@ -177,6 +180,7 @@ class LegalNewsScraper:
                 url="https://www.scconline.com/blog/",
                 source="SCC Online",
                 published_date=now,
+                is_fallback=True
             ),
             NewsArticle(
                 title="Legal Aid Services Expanded Across States",
@@ -184,6 +188,7 @@ class LegalNewsScraper:
                 url="https://www.indialegallive.com/",
                 source="India Legal",
                 published_date=now,
+                is_fallback=True
             ),
             NewsArticle(
                 title="Anticipatory Bail: Recent Developments in Jurisprudence",
@@ -191,6 +196,7 @@ class LegalNewsScraper:
                 url="https://www.scobserver.in/",
                 source="Supreme Court Observer",
                 published_date=now,
+                is_fallback=True
             ),
         ]
     

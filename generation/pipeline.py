@@ -35,6 +35,7 @@ class GroundedGenerationPipeline:
             not evidence.statutory_results 
             and not evidence.case_law_results
             and not evidence.session_documents
+            and not getattr(evidence, 'external_results', [])
         ):
             return GeneratedResponse(
                 answer="The available retrieved evidence does not sufficiently support a reliable answer.",

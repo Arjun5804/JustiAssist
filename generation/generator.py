@@ -28,7 +28,9 @@ class GroundedGenerator:
             text_parts.append(f"[Evidence ID: {item.chunk_id}]\nSection: {item.section_number}\nSource: {item.source_dataset}\n{item.text}\n")
             
         for item in getattr(evidence, 'external_results', []):
-            text_parts.append(f"[Evidence ID: {item.chunk_id}]\nSection: {item.section_number}\nSource: {item.source_dataset}\n{item.text}\n")
+            authority = item.provenance.source_authority.value if item.provenance else "UNKNOWN"
+            date_info = f"\nPublished: {item.provenance.source_date}" if item.provenance and item.provenance.source_date else ""
+            text_parts.append(f"[Evidence ID: {item.chunk_id}]\nAuthority: {authority}{date_info}\nSection: {item.section_number}\nSource: {item.source_dataset}\n{item.text}\n")
             
         for doc in evidence.session_documents:
             chunk_id = doc.get("chunk_id", "unknown_chunk")

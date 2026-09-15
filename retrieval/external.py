@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class AuthorityClassifier:
     """Deterministically classifies source authority based on domain."""
     
-    PRIMARY_DOMAINS = ["india.gov.in", "supreme.court", "high.court", "egazette.nic.in"]
+    PRIMARY_DOMAINS = ["india.gov.in", "supreme.court.gov.in", "highcourts.gov.in", "egazette.nic.in"]
     TRUSTED_DOMAINS = ["indiankanoon.org", "livelaw.in", "barandbench.com", "scconline.com"]
     NEWS_DOMAINS = ["thehindu.com", "timesofindia.indiatimes.com", "ndtv.com"]
     
@@ -32,15 +32,15 @@ class AuthorityClassifier:
                 return AuthorityLevel.UNKNOWN
                 
             for d in cls.PRIMARY_DOMAINS:
-                if d in domain:
+                if domain == d or domain.endswith(f".{d}"):
                     return AuthorityLevel.PRIMARY_OFFICIAL
                     
             for d in cls.TRUSTED_DOMAINS:
-                if d in domain:
+                if domain == d or domain.endswith(f".{d}"):
                     return AuthorityLevel.TRUSTED_LEGAL
                     
             for d in cls.NEWS_DOMAINS:
-                if d in domain:
+                if domain == d or domain.endswith(f".{d}"):
                     return AuthorityLevel.NEWS
                     
         except Exception:
@@ -225,8 +225,8 @@ class ExternalRetriever:
             
             valid_articles = []
             for a in articles[:2]:
-                # Heuristic to detect fallback news
-                if "livelaw.in/top-stories" in a.url and a.title.startswith("Supreme Court Rules on Right to Privacy"):
+                # Exclude fallback news completely
+                if getattr(a, 'is_fallback', False):
                     continue
                 valid_articles.append({
                     "title": a.title,

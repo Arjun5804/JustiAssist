@@ -91,25 +91,31 @@ class ClaimVerifier:
             referenced_evidence.append(evidence_mapping[eid])
             
         # Semantic check using isolated LLM
-        return await self._semantic_verify(claim, referenced_evidence)
+        all_evidence = list(evidence_mapping.values())
+        return await self._semantic_verify(claim, referenced_evidence, all_evidence)
 
     async def _semantic_verify(
         self, 
         claim: Claim, 
-        referenced_evidence: List[SearchResult]
+        referenced_evidence: List[SearchResult],
+        all_evidence: List[SearchResult]
     ) -> ClaimVerification:
         
-        evidence_text = "\n".join([f"[{e.chunk_id}] {e.text}" for e in referenced_evidence])
+        cited_text = "\n".join([f"[{e.chunk_id}] {e.text}" for e in referenced_evidence])
+        all_text = "\n".join([f"[{e.chunk_id}] {e.text}" for e in all_evidence])
         
         prompt = f"""You are an exact and strict verifier.
-Your ONLY job is to determine if the supplied EVIDENCE fully supports the CLAIM.
+Your ONLY job is to determine if the supplied CITED EVIDENCE fully supports the CLAIM, and ensure NO OTHER AVAILABLE EVIDENCE contradicts it.
 
 CLAIM: "{claim.text}"
 
-EVIDENCE:
-{evidence_text}
+CITED EVIDENCE (Evidence the claim relies on):
+{cited_text}
 
-Does the evidence fully support the claim, partially support it, completely contradict it, or not support it at all?
+ALL AVAILABLE EVIDENCE (To check for contradictions):
+{all_text}
+
+Does the cited evidence fully support the claim, partially support it, or not support it at all? Furthermore, does ANY available evidence contradict it?
 You must output a JSON object with exactly this format:
 {{
     "verdict": "SUPPORTED" | "PARTIALLY_SUPPORTED" | "UNSUPPORTED" | "CONFLICTING",
@@ -117,9 +123,9 @@ You must output a JSON object with exactly this format:
 }}
 
 Do NOT use outside knowledge. 
-If the evidence does not state the claim, it is UNSUPPORTED.
-If the claim goes beyond what is in the evidence, it is PARTIALLY_SUPPORTED or UNSUPPORTED.
-If the evidence explicitly states something contradictory to the claim, it is CONFLICTING.
+If the CITED EVIDENCE does not state the claim, it is UNSUPPORTED.
+If the claim goes beyond what is in the CITED EVIDENCE, it is PARTIALLY_SUPPORTED or UNSUPPORTED.
+If ANY AVAILABLE EVIDENCE explicitly states something contradictory to the claim, it is CONFLICTING.
 """
         
         try:
