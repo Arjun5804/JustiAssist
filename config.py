@@ -30,6 +30,15 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = Field(default="sqlite:///justiassist.db")
     
+    # Storage
+    STORAGE_PROVIDER: Literal["local", "s3"] = "local"
+    LOCAL_STORAGE_ROOT: str = ".data/storage"
+    S3_ENDPOINT: str | None = None
+    S3_ACCESS_KEY: SecretStr | None = None
+    S3_SECRET_KEY: SecretStr | None = None
+    S3_BUCKET: str | None = None
+    S3_REGION: str | None = None
+    
     # LLM (Groq Primary)
     GROQ_API_KEY: SecretStr | None = None
     GROQ_MODEL: str = "llama-3.3-70b-versatile"

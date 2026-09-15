@@ -1,4 +1,4 @@
-from app import app
+import app as main_app
 
 EXPECTED_ROUTES = {
     # Auth
@@ -27,6 +27,7 @@ EXPECTED_ROUTES = {
     ("GET", "/api/news"),
     
     # Kanoon
+
     ("GET", "/api/kanoon/search"),
     ("GET", "/api/kanoon/doc/{doc_id}"),
 }
@@ -35,11 +36,21 @@ def test_critical_routes_registered():
     """Verify that all critical endpoints from Phase 0B are still registered."""
     registered_routes = set()
     
-    for route in app.routes:
-        if hasattr(route, 'methods') and route.methods:
-            for method in route.methods:
-                if method != "HEAD":
-                    registered_routes.add((method, route.path))
+    def extract_routes(routes_list, prefix=""):
+        for route in routes_list:
+            if hasattr(route, 'methods') and route.methods:
+                for method in route.methods:
+                    if method != "HEAD":
+                        registered_routes.add((method, prefix + getattr(route, 'path', '')))
+            if hasattr(route, 'routes'):
+                extract_routes(route.routes, prefix + getattr(route, 'prefix', getattr(route, 'path', '')))
+            elif hasattr(route, 'original_router') and hasattr(route.original_router, 'routes'):
+                extract_routes(route.original_router.routes, prefix + getattr(route, 'prefix', getattr(route, 'path', '')))
+                
+    extract_routes(main_app.app.routes)
+    
+    print(f"\nRegistered routes: {registered_routes}")
+    print(f"Expected routes: {EXPECTED_ROUTES}")
                     
     missing_routes = EXPECTED_ROUTES - registered_routes
     

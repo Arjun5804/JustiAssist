@@ -8,9 +8,15 @@ from llm_provider import call_llm
 from api.query import QueryRequest
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from typing import Optional, List, Dict, Any
+import uuid
+
 from core.dependencies import deps
 from document_session import session_manager
+from services.auth import get_current_user
+from services.database import get_db_session, Document, User
+from core.storage import storage
 
 def extract_text_from_file(file_path: Path, filename: str) -> str:
     """Extract text from uploaded file"""
@@ -59,7 +65,8 @@ async def upload_document(
     query: str = Form(...),
     mode: str = Form(default="auto"),
     session_id: str = Form(default=None),
-    document_type: str = Form(default="OTHER")
+    document_type: str = Form(default="OTHER"),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Upload a document (FIR, charge sheet, case summary) for case-specific analysis.
@@ -68,15 +75,7 @@ async def upload_document(
     - Parsed and chunked
     - Indexed in session-level vector store
     - Clearly marked as NON-STATUTORY evidence
-    
-    Documents may be used for:
-    - Fact extraction
-    - Case-specific reasoning
-    - Bail evaluation context
-    
-    Documents will NEVER:
-    - Override statutory law
-    - Be treated as authoritative legislation
+    - Stored persistently in Object Storage for authorized access
     """
     # Validate file
     allowed_extensions = ['.txt', '.pdf', '.doc', '.docx']
@@ -91,23 +90,71 @@ async def upload_document(
     # Size limit (5MB)
     max_size = 5 * 1024 * 1024
     contents = await file.read()
-    if len(contents) > max_size:
+    file_size = len(contents)
+    if file_size > max_size:
         raise HTTPException(status_code=400, detail="File too large. Maximum 5MB allowed.")
     
-    # Save temporarily and extract text
+    # Generate ID and Key
+    document_id = str(uuid.uuid4())
+    safe_filename = file.filename.replace('/', '_').replace('\\', '_')
+    object_key = f"documents/{current_user.id}/{document_id}/{safe_filename}"
+    
+    # Upload to Object Storage
+    try:
+        await storage.upload(object_key, contents)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload document to storage: {str(e)}")
+        
+    # Persist metadata
+    db = get_db_session()
+    try:
+        if not session_id:
+            session_id = str(uuid.uuid4())
+            
+        doc_meta = Document(
+            id=document_id,
+            user_id=current_user.id,
+            session_id=session_id,
+            filename=file.filename,
+            object_key=object_key,
+            document_type=document_type,
+            content_type=file.content_type or "application/octet-stream",
+            file_size=file_size
+        )
+        db.add(doc_meta)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Rollback storage upload
+        try:
+            await storage.delete(object_key)
+        except:
+            pass
+        raise HTTPException(status_code=500, detail=f"Failed to persist document metadata: {str(e)}")
+    finally:
+        db.close()
+        
+    # Process document (download to temporary working file as required by Phase 7D)
     with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
-        tmp.write(contents)
         tmp_path = Path(tmp.name)
     
     try:
+        # Download from object storage for processing
+        await storage.download_to_file(object_key, tmp_path)
         document_text = extract_text_from_file(tmp_path, file.filename)
+    except Exception as e:
+        # If processing fails, DO NOT delete the persistent document
+        # We just report the error (or continue with what we have if possible)
+        # But here, we can't extract text, so we return a processing error
+        raise HTTPException(status_code=422, detail=f"Document stored, but processing failed: {str(e)}")
     finally:
-        tmp_path.unlink()  # Clean up temp file
+        if tmp_path.exists():
+            tmp_path.unlink()  # Clean up temp file
     
     if not document_text or len(document_text) < 10:
-        raise HTTPException(status_code=400, detail="Could not extract text from document.")
+        raise HTTPException(status_code=422, detail="Document stored, but could not extract valid text.")
     
-    # Get or create session
+    # Get or create in-memory session (runtime cache/FAISS index)
     session = session_manager.get_or_create_session(session_id)
     
     # Add document to session (chunked and indexed)
@@ -292,28 +339,113 @@ async def upload_document(
 
 
 @router.get("/session/{session_id}/documents")
-async def list_session_documents(session_id: str):
+async def list_session_documents(session_id: str, current_user: User = Depends(get_current_user)):
     """List all documents in a session"""
+    db = get_db_session()
+    try:
+        docs = db.query(Document).filter(Document.session_id == session_id).all()
+    finally:
+        db.close()
+        
+    if not docs:
+        # Check if it exists in memory only (shouldn't happen with new flow)
+        session = session_manager.get_session(session_id)
+        if not session:
+            return {"session_id": session_id, "documents": [], "total_chunks": 0}
+            
+    # Verify ownership
+    if docs and any(d.user_id != current_user.id for d in docs):
+        raise HTTPException(status_code=403, detail="Unauthorized access to session documents")
+        
+    doc_list = [
+        {
+            "document_id": d.id,
+            "filename": d.filename,
+            "document_type": d.document_type,
+            "file_size": d.file_size,
+            "upload_time": d.created_at.timestamp() if d.created_at else 0
+        }
+        for d in docs
+    ]
+    
+    # Try to get in-memory session stats
     session = session_manager.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found or expired")
+    total_chunks = len(session.chunk_metadata) if session else 0
     
     return {
         "session_id": session_id,
-        "documents": session.list_documents(),
-        "total_chunks": len(session.chunk_metadata)
+        "documents": doc_list,
+        "total_chunks": total_chunks
     }
 
 
+@router.get("/session/{session_id}/document/{document_id}/download")
+async def download_document(session_id: str, document_id: str, current_user: User = Depends(get_current_user)):
+    """Download a document from object storage"""
+    db = get_db_session()
+    try:
+        doc = db.query(Document).filter(Document.id == document_id, Document.session_id == session_id).first()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+        if doc.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+        
+        object_key = doc.object_key
+        content_type = doc.content_type
+        filename = doc.filename
+    finally:
+        db.close()
+        
+    try:
+        if not await storage.exists(object_key):
+            raise HTTPException(status_code=404, detail="Document not found in storage")
+            
+        # Return streaming response
+        return StreamingResponse(
+            storage.stream(object_key),
+            media_type=content_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to download document: {str(e)}")
+
+
 @router.delete("/session/{session_id}/documents")
-async def clear_session_documents(session_id: str):
+async def clear_session_documents(session_id: str, current_user: User = Depends(get_current_user)):
     """Clear all documents from a session"""
+    db = get_db_session()
+    try:
+        docs = db.query(Document).filter(Document.session_id == session_id).all()
+        
+        if docs and any(d.user_id != current_user.id for d in docs):
+            raise HTTPException(status_code=403, detail="Unauthorized access to session documents")
+            
+        doc_count = len(docs)
+        
+        for doc in docs:
+            # Delete from storage first, if it fails, we keep DB
+            try:
+                await storage.delete(doc.object_key)
+            except Exception:
+                pass
+            
+            db.delete(doc)
+            
+        db.commit()
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+        
+    # Clear in-memory session
     session = session_manager.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found or expired")
-    
-    doc_count = len(session.documents)
-    session.clear()
+    if session:
+        session.clear()
     
     return {
         "session_id": session_id,
@@ -323,32 +455,52 @@ async def clear_session_documents(session_id: str):
 
 
 @router.delete("/session/{session_id}/document/{document_id}")
-async def delete_document(session_id: str, document_id: str):
+async def delete_document(session_id: str, document_id: str, current_user: User = Depends(get_current_user)):
     """Delete a specific document from session"""
+    db = get_db_session()
+    try:
+        doc = db.query(Document).filter(Document.id == document_id, Document.session_id == session_id).first()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+        if doc.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+            
+        object_key = doc.object_key
+        
+        # Delete from storage
+        try:
+            await storage.delete(object_key)
+        except Exception:
+            pass # Best effort
+            
+        db.delete(doc)
+        db.commit()
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+        
+    # Remove from in-memory session
     session = session_manager.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found or expired")
-    
-    if document_id not in session.documents:
-        raise HTTPException(status_code=404, detail="Document not found in session")
-    
-    # Remove document and rebuild index
-    del session.documents[document_id]
-    
-    # Rebuild index without deleted document chunks
-    session.chunk_metadata = [c for c in session.chunk_metadata if c['document_id'] != document_id]
-    
-    # Rebuild FAISS index
-    if session.chunk_metadata:
-        session.index = None  # Reset
-        texts = [c['text'] for c in session.chunk_metadata]
-        model = session._get_embedding_model()
-        embeddings = model.encode(texts, convert_to_numpy=True, normalize_embeddings=True).astype('float32')
-        import faiss
-        session.index = faiss.IndexFlatIP(session._embedding_dim)
-        session.index.add(embeddings)
-    else:
-        session.index = None
+    if session and document_id in session.documents:
+        del session.documents[document_id]
+        # Rebuild index without deleted document chunks
+        session.chunk_metadata = [c for c in session.chunk_metadata if c['document_id'] != document_id]
+        
+        # Rebuild FAISS index
+        if session.chunk_metadata:
+            session.index = None  # Reset
+            texts = [c['text'] for c in session.chunk_metadata]
+            model = session._get_embedding_model()
+            embeddings = model.encode(texts, convert_to_numpy=True, normalize_embeddings=True).astype('float32')
+            import faiss
+            session.index = faiss.IndexFlatIP(session._embedding_dim)
+            session.index.add(embeddings)
+        else:
+            session.index = None
     
     return {
         "session_id": session_id,
@@ -361,12 +513,21 @@ async def delete_document(session_id: str, document_id: str):
 @router.post("/session/{session_id}/query")
 async def query_with_session(
     session_id: str,
-    request: QueryRequest
+    request: QueryRequest,
+    current_user: User = Depends(get_current_user)
 ):
     """
     Query using existing session documents.
     Documents from previous uploads in this session are automatically included.
     """
+    db = get_db_session()
+    try:
+        docs = db.query(Document).filter(Document.session_id == session_id).all()
+        if docs and any(d.user_id != current_user.id for d in docs):
+            raise HTTPException(status_code=403, detail="Unauthorized access to session")
+    finally:
+        db.close()
+        
     session = session_manager.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found or expired")

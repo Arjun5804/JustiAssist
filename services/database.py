@@ -3,7 +3,7 @@ JustiAssist Database Models — SQLAlchemy + SQLite
 User management, chat history, and audit trails.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import create_engine, Column, Integer, String, Text, Float, DateTime, Boolean, ForeignKey
@@ -50,6 +50,26 @@ class User(Base):
 
     # Relationships
     messages = relationship("ChatMessage", back_populates="user", cascade="all, delete-orphan")
+    documents = relationship("Document", back_populates="user", cascade="all, delete-orphan")
+
+
+class Document(Base):
+    """
+    Metadata for user-uploaded documents stored in Object Storage.
+    """
+    __tablename__ = "documents"
+    
+    id = Column(String(36), primary_key=True)  # UUID
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    session_id = Column(String(50), nullable=False)
+    filename = Column(String(255), nullable=False)
+    object_key = Column(String(512), nullable=False, unique=True)
+    document_type = Column(String(50), nullable=False)
+    content_type = Column(String(100), nullable=False)
+    file_size = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    user = relationship("User", back_populates="documents")
 
     def to_dict(self):
         return {

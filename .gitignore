@@ -39,6 +39,7 @@ vector_stores/*/*.pkl
 *.sqlite
 *.sqlite3
 justiassist.db
+.data/
 
 # Cache & Logs
 data/kanoon_cache/
