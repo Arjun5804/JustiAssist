@@ -96,7 +96,7 @@ async def process_query_endpoint(
     
     chat_context = ""
     if user:
-        chat_context = format_history_for_context(
+        chat_context = await format_history_for_context(
             user_id=user.id,
             conversation_id=conversation_id,
             max_messages=6,
@@ -104,7 +104,7 @@ async def process_query_endpoint(
         )
         from core.exceptions import ConversationOwnershipError
         try:
-            save_message(
+            await save_message(
                 user_id=user.id, role="user", content=query,
                 conversation_id=conversation_id, session_id=request.session_id
             )
@@ -125,7 +125,7 @@ async def process_query_endpoint(
 
     if user:
         qtype_val = state.query_type.value if hasattr(state.query_type, 'value') else state.query_type
-        save_message(
+        await save_message(
             user_id=user.id, role="assistant", content=state.final_answer,
             conversation_id=conversation_id, query_type=qtype_val,
             confidence_score=state.confidence_score,
@@ -165,10 +165,10 @@ async def query_stream_endpoint(
             conv_id = conversation_id or str(uuid.uuid4())[:12]
             chat_context = ""
             if user:
-                chat_context = format_history_for_context(user_id=user.id, conversation_id=conv_id)
+                chat_context = await format_history_for_context(user_id=user.id, conversation_id=conv_id)
                 from core.exceptions import ConversationOwnershipError
                 try:
-                    save_message(user_id=user.id, role="user", content=query, conversation_id=conv_id, session_id=session_id)
+                    await save_message(user_id=user.id, role="user", content=query, conversation_id=conv_id, session_id=session_id)
                 except ConversationOwnershipError as e:
                     yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
                     return
@@ -211,7 +211,7 @@ async def query_stream_endpoint(
                     final_state = msg["state"]
                     if user:
                         qtype_val = final_state.query_type.value if hasattr(final_state.query_type, 'value') else final_state.query_type
-                        save_message(
+                        await save_message(
                             user_id=user.id, role="assistant", content=final_state.final_answer,
                             conversation_id=conv_id, query_type=qtype_val,
                             confidence_score=final_state.confidence_score, grounding_status=final_state.grounding_status,

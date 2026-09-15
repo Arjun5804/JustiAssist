@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     S3_BUCKET: str | None = None
     S3_REGION: str | None = None
     
+    # Caching
+    REDIS_ENABLED: bool = False
+    REDIS_URL: str = Field(default="redis://localhost:6379")
+    REDIS_DEFAULT_TTL: int = 3600
+    
     # LLM (Groq Primary)
     GROQ_API_KEY: SecretStr | None = None
     GROQ_MODEL: str = "llama-3.3-70b-versatile"

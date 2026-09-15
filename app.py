@@ -77,6 +77,7 @@ logger = logging.getLogger(__name__)
 
 # Global instances via deps container
 from core.dependencies import deps
+from services.cache import cache
 
 
 @asynccontextmanager
@@ -87,6 +88,9 @@ async def lifespan(app: FastAPI):
     print("JUSTIASSIST v2.0 - Starting up...")
     print("Powered by Native Agents | Firecrawl | Zero-Hallucination Engine")
     print("="*60)
+    
+    # Initialize cache
+    await cache.init()
     
     # Initialize agents (legacy, still used as utilities)
     deps.query_classifier = QueryClassifier()
@@ -137,6 +141,7 @@ async def lifespan(app: FastAPI):
     
     # Cleanup
     print("Shutting down JustiAssist...")
+    await cache.close()
 
 app = FastAPI(
     title="JustiAssist",

@@ -16,7 +16,7 @@ async def get_chat_history(
     if not user:
         return {"messages": [], "authenticated": False}
     
-    messages = get_history(
+    messages = await get_history(
         user_id=user.id,
         conversation_id=conversation_id,
         limit=limit,
@@ -34,7 +34,7 @@ async def get_conversations(
     if not user:
         return {"conversations": [], "authenticated": False}
     
-    conversations = get_recent_conversations(user_id=user.id, limit=limit)
+    conversations = await get_recent_conversations(user_id=user.id, limit=limit)
     return {"conversations": conversations, "authenticated": True}
 
 
@@ -44,7 +44,7 @@ async def delete_chat_history(
     user = Depends(get_current_user)
 ):
     """Clear chat history (all or specific conversation)"""
-    count = clear_history(user_id=user.id, conversation_id=conversation_id)
+    count = await clear_history(user_id=user.id, conversation_id=conversation_id)
     return {"deleted": count, "message": f"Cleared {count} messages"}
 
 

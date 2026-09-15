@@ -17,6 +17,7 @@ from document_session import session_manager
 from services.auth import get_current_user
 from services.database import get_db_session, Document, User
 from core.storage import storage
+from services.cache import cache
 
 def extract_text_from_file(file_path: Path, filename: str) -> str:
     """Extract text from uploaded file"""
@@ -123,6 +124,7 @@ async def upload_document(
         )
         db.add(doc_meta)
         db.commit()
+        await cache.delete(f"justiassist:v1:docs:session:{current_user.id}:{session_id}")
     except Exception as e:
         db.rollback()
         # Rollback storage upload
@@ -341,6 +343,11 @@ async def upload_document(
 @router.get("/session/{session_id}/documents")
 async def list_session_documents(session_id: str, current_user: User = Depends(get_current_user)):
     """List all documents in a session"""
+    cache_key = f"justiassist:v1:docs:session:{current_user.id}:{session_id}"
+    cached_val = await cache.get(cache_key)
+    if cached_val is not None:
+        return cached_val
+        
     db = get_db_session()
     try:
         docs = db.query(Document).filter(Document.session_id == session_id).all()
@@ -372,11 +379,15 @@ async def list_session_documents(session_id: str, current_user: User = Depends(g
     session = session_manager.get_session(session_id)
     total_chunks = len(session.chunk_metadata) if session else 0
     
-    return {
+    response_data = {
         "session_id": session_id,
         "documents": doc_list,
         "total_chunks": total_chunks
     }
+    
+    await cache.set(cache_key, response_data, ttl=1800)
+    
+    return response_data
 
 
 @router.get("/session/{session_id}/document/{document_id}/download")
@@ -433,6 +444,7 @@ async def clear_session_documents(session_id: str, current_user: User = Depends(
             db.delete(doc)
             
         db.commit()
+        await cache.delete(f"justiassist:v1:docs:session:{current_user.id}:{session_id}")
     except HTTPException:
         raise
     except Exception as e:
@@ -474,6 +486,7 @@ async def delete_document(session_id: str, document_id: str, current_user: User 
             
         db.delete(doc)
         db.commit()
+        await cache.delete(f"justiassist:v1:docs:session:{current_user.id}:{session_id}")
     except HTTPException:
         raise
     except Exception as e:

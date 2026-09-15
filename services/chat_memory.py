@@ -6,17 +6,19 @@ Enables context-aware follow-up questions and conversation continuity.
 
 import json
 import uuid
+import asyncio
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from datetime import timedelta
 
 from services.database import get_db_session, ChatMessage
 from core.exceptions import ConversationOwnershipError
+from services.cache import cache
 
 
 # ==================== Core CRUD ====================
 
-def save_message(
+async def save_message(
     user_id: int,
     role: str,
     content: str,
@@ -30,21 +32,6 @@ def save_message(
 ) -> ChatMessage:
     """
     Save a chat message to the database.
-    
-    Args:
-        user_id: ID of the authenticated user
-        role: "user" or "assistant"
-        content: Message text
-        conversation_id: Groups messages into a conversation thread
-        query_type: legal_information, bail_related, etc.
-        confidence_score: AI confidence for assistant messages
-        grounding_status: pass/partial/fail for assistant messages
-        agents_used: List of Native agent names that contributed
-        sources_used: List of data sources (local_vectors, firecrawl, etc.)
-        session_id: Document session ID if applicable
-    
-    Returns:
-        The saved ChatMessage object
     """
     db = get_db_session()
     try:
@@ -71,11 +58,12 @@ def save_message(
                 if dup_msg:
                     return dup_msg
 
+        msg_conv_id = conversation_id or str(uuid.uuid4())[:12]
         message = ChatMessage(
             user_id=user_id,
             role=role,
             content=content,
-            conversation_id=conversation_id or str(uuid.uuid4())[:12],
+            conversation_id=msg_conv_id,
             query_type=query_type,
             confidence_score=confidence_score,
             grounding_status=grounding_status,
@@ -89,6 +77,11 @@ def save_message(
             db.add(message)
             db.commit()
             db.refresh(message)
+            
+            # Phase 7E Cache invalidation (DB before cache)
+            await cache.delete(f"justiassist:v1:chat:history:{user_id}:{msg_conv_id}")
+            await cache.delete(f"justiassist:v1:chat:conversations:{user_id}")
+            
             return message
         except Exception:
             db.rollback()
@@ -97,7 +90,7 @@ def save_message(
         db.close()
 
 
-def get_history(
+async def get_history(
     user_id: int,
     conversation_id: str = None,
     limit: int = 20,
@@ -105,16 +98,14 @@ def get_history(
 ) -> List[Dict[str, Any]]:
     """
     Retrieve chat history for a user.
-    
-    Args:
-        user_id: ID of the user
-        conversation_id: Filter by specific conversation (optional)
-        limit: Max messages to return
-        offset: Pagination offset
-    
-    Returns:
-        List of message dicts ordered by creation time
     """
+    cache_key = None
+    if conversation_id and offset == 0 and limit == 20: # Only cache the standard first-page load
+        cache_key = f"justiassist:v1:chat:history:{user_id}:{conversation_id}"
+        cached_val = await cache.get(cache_key)
+        if cached_val is not None:
+            return cached_val
+
     db = get_db_session()
     try:
         query = db.query(ChatMessage).filter(ChatMessage.user_id == user_id)
@@ -130,18 +121,27 @@ def get_history(
         )
 
         # Return in chronological order (oldest first)
-        return [m.to_dict() for m in reversed(messages)]
+        results = [m.to_dict() for m in reversed(messages)]
+        
+        if cache_key:
+            await cache.set(cache_key, results, ttl=3600)
+            
+        return results
     finally:
         db.close()
 
 
-def get_recent_conversations(user_id: int, limit: int = 10) -> List[Dict[str, Any]]:
+async def get_recent_conversations(user_id: int, limit: int = 10) -> List[Dict[str, Any]]:
     """
     Get a list of recent distinct conversations for the user.
-    
-    Returns:
-        List of conversation summaries with id, first message, and timestamp
     """
+    cache_key = None
+    if limit == 10:
+        cache_key = f"justiassist:v1:chat:conversations:{user_id}"
+        cached_val = await cache.get(cache_key)
+        if cached_val is not None:
+            return cached_val
+
     db = get_db_session()
     try:
         from sqlalchemy import func
@@ -186,21 +186,17 @@ def get_recent_conversations(user_id: int, limit: int = 10) -> List[Dict[str, An
                 "message_count": c.message_count,
             })
             
+        if cache_key:
+            await cache.set(cache_key, results, ttl=900)
+            
         return results
     finally:
         db.close()
 
 
-def clear_history(user_id: int, conversation_id: str = None) -> int:
+async def clear_history(user_id: int, conversation_id: str = None) -> int:
     """
     Clear chat history for a user.
-    
-    Args:
-        user_id: ID of the user
-        conversation_id: Clear specific conversation only (optional)
-    
-    Returns:
-        Number of messages deleted
     """
     db = get_db_session()
     try:
@@ -213,6 +209,13 @@ def clear_history(user_id: int, conversation_id: str = None) -> int:
         try:
             query.delete()
             db.commit()
+            
+            # Invalidate cache
+            if conversation_id:
+                await cache.delete(f"justiassist:v1:chat:history:{user_id}:{conversation_id}")
+            # we also invalidate conversations
+            await cache.delete(f"justiassist:v1:chat:conversations:{user_id}")
+            
             return count
         except Exception:
             db.rollback()
@@ -221,7 +224,7 @@ def clear_history(user_id: int, conversation_id: str = None) -> int:
         db.close()
 
 
-def format_history_for_context(
+async def format_history_for_context(
     user_id: int,
     conversation_id: str = None,
     max_messages: int = 10,
@@ -230,15 +233,8 @@ def format_history_for_context(
     """
     Format recent chat history as a context string for LLM prompts.
     Enables context-aware follow-up questions.
-    
-    Returns:
-        Formatted string like:
-        PREVIOUS CONVERSATION:
-        User: What is IPC 302?
-        Assistant: Section 302 of the IPC defines murder...
-        User: Is this bailable?
     """
-    messages = get_history(
+    messages = await get_history(
         user_id=user_id,
         conversation_id=conversation_id,
         limit=max_messages,
