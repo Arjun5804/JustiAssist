@@ -18,7 +18,8 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from services.database import Base, DATABASE_URL, engine
+from config import settings
+from services.database import Base
 
 target_metadata = Base.metadata
 
@@ -40,7 +41,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = DATABASE_URL
+    url = settings.DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -59,7 +60,16 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine
+    from sqlalchemy import create_engine
+    
+    connect_args = {}
+    if settings.DATABASE_URL.startswith("sqlite"):
+        connect_args["check_same_thread"] = False
+        
+    connectable = create_engine(
+        settings.DATABASE_URL,
+        connect_args=connect_args
+    )
 
     with connectable.connect() as connection:
         context.configure(

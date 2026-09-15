@@ -20,9 +20,13 @@ if DATABASE_URL.startswith("sqlite:///") and not DATABASE_URL.startswith("sqlite
     db_path = Path(__file__).parent.parent / db_file
     DATABASE_URL = f"sqlite:///{db_path}"
 
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},  # Required for SQLite
+    connect_args=connect_args,
     echo=False
 )
 
