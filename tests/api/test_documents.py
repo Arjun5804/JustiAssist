@@ -171,3 +171,40 @@ def test_document_download_and_ownership(client, auth_headers, mock_storage, tes
     # Download other user's document (403 Forbidden)
     resp = client.get(f"/session/{session_id}/document/{other_doc_id}/download", headers=auth_headers)
     assert resp.status_code == 403
+
+def test_clear_session_documents_storage_failure(client, test_user, auth_headers, mock_storage):
+    from services.database import get_db_session, Document
+    import uuid
+    
+    db = get_db_session()
+    session_id = "test-clear-fail-session"
+    doc_id = str(uuid.uuid4())
+    doc = Document(
+        id=doc_id,
+        user_id=test_user.id,
+        session_id=session_id,
+        filename="to_delete.txt",
+        object_key=f"documents/{test_user.id}/{doc_id}/to_delete.txt",
+        document_type="OTHER",
+        content_type="text/plain",
+        file_size=10
+    )
+    db.add(doc)
+    db.commit()
+    db.close()
+    
+    mock_storage.delete.side_effect = Exception("Storage deletion error")
+    
+    resp = client.delete(f"/session/{session_id}/documents", headers=auth_headers)
+    assert resp.status_code == 500
+    assert "Storage deletion error" in resp.text
+    
+    # Verify DB metadata remains
+    db = get_db_session()
+    remaining_doc = db.query(Document).filter_by(id=doc_id).first()
+    assert remaining_doc is not None
+    
+    # Cleanup
+    db.delete(remaining_doc)
+    db.commit()
+    db.close()

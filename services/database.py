@@ -74,11 +74,14 @@ class Document(Base):
     def to_dict(self):
         return {
             "id": self.id,
-            "email": self.email,
-            "display_name": self.display_name,
-            "is_active": self.is_active,
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "filename": self.filename,
+            "object_key": self.object_key,
+            "document_type": self.document_type,
+            "content_type": self.content_type,
+            "file_size": self.file_size,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "last_login": self.last_login.isoformat() if self.last_login else None,
         }
 
 

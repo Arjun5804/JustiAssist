@@ -425,11 +425,10 @@ async def clear_session_documents(session_id: str, current_user: User = Depends(
         doc_count = len(docs)
         
         for doc in docs:
-            # Delete from storage first, if it fails, we keep DB
             try:
                 await storage.delete(doc.object_key)
-            except Exception:
-                pass
+            except Exception as e:
+                raise Exception(f"Failed to delete object {doc.object_key} from storage: {str(e)}")
             
             db.delete(doc)
             
