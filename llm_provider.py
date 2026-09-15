@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any, Tuple
 from collections import OrderedDict
 
 from config import (
-    GROQ_API_KEY,
+    settings,
     GROQ_MODEL,
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
@@ -84,11 +84,11 @@ class LLMProvider:
     
     def _setup_groq(self):
         """Initialize Groq async client."""
-        if GROQ_API_KEY:
+        if settings.GROQ_API_KEY:
             try:
                 from groq import AsyncGroq
                 self._groq_client = AsyncGroq(
-                    api_key=GROQ_API_KEY,
+                    api_key=settings.GROQ_API_KEY.get_secret_value(),
                     timeout=self.TIMEOUT
                 )
                 logger.info(f"Groq client initialized (model: {GROQ_MODEL})")

@@ -34,9 +34,8 @@ rank_bm25>=0.2.2
 
 # ==================== NEW: v2.0 Dependencies ====================
 
-# Agentic Framework
-crewai>=0.108.0
-crewai-tools>=0.33.0
+# Configuration
+pydantic-settings>=2.0.0
 
 # Web Search & Extract
 firecrawl-py>=1.0.0

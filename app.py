@@ -1,7 +1,7 @@
 """
 JustiAssist v2.0 - FastAPI Web Application
 Intelligent RAG & Agentic Bail Support System for Indian Legal Domain
-Powered by CrewAI, Firecrawl, and Zero-Hallucination Enforcement
+Powered by Native Agents, Firecrawl, and Zero-Hallucination Enforcement
 """
 
 import os
@@ -33,6 +33,7 @@ from services.chat_memory import (
 from agents.orchestrator import AgentOrchestrator
 
 from config import (
+    settings,
     VECTOR_STORE_PATH, 
     TOP_K_STATUTORY,
     TOP_K_CASE_LAW,
@@ -85,7 +86,7 @@ async def lifespan(app: FastAPI):
     
     print("="*60)
     print("JUSTIASSIST v2.0 - Starting up...")
-    print("Powered by CrewAI | Firecrawl | Zero-Hallucination Engine")
+    print("Powered by Native Agents | Firecrawl | Zero-Hallucination Engine")
     print("="*60)
     
     # Initialize agents (legacy, still used as utilities)
@@ -149,10 +150,7 @@ app = FastAPI(
 )
 
 # CORS middleware
-allowed_origins = os.getenv(
-    "ALLOWED_ORIGINS", 
-    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000"
-).split(",")
+allowed_origins = settings.ALLOWED_ORIGINS.split(",")
 
 app.add_middleware(
     CORSMiddleware,

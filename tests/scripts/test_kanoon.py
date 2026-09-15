@@ -43,6 +43,5 @@ async def test_kanoon():
         print(f"\n❌ API Check FAILED: {e}")
 
 if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
+    pass
     asyncio.run(test_kanoon())

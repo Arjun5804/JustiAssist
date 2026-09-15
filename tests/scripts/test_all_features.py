@@ -65,7 +65,8 @@ async def main():
     
     from firecrawl import FirecrawlApp
     try:
-        app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
+        from config import settings
+        app = FirecrawlApp(api_key=settings.FIRECRAWL_API_KEY.get_secret_value() if settings.FIRECRAWL_API_KEY else "")
         results = app.search(query=f"India law legal BNS 304", limit=2)
         print(f"Firecrawl returned data successfully.")
         

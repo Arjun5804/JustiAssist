@@ -44,7 +44,7 @@ async def test():
     if results and found_297:
         print("\nTesting Reranker...")
         reranker = LegalReranker()
-        reranked = reranker.rerank(query, results, extracted_sections=extracted)
+        reranked = reranker.rerank(results, requested_sections=extracted)
         print(f"Reranked results: {len(reranked)}")
         for r in reranked:
              print(f" - [{r.score:.3f}] {r.section_number}\n")

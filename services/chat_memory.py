@@ -37,7 +37,7 @@ def save_message(
         query_type: legal_information, bail_related, etc.
         confidence_score: AI confidence for assistant messages
         grounding_status: pass/partial/fail for assistant messages
-        agents_used: List of CrewAI agent names that contributed
+        agents_used: List of Native agent names that contributed
         sources_used: List of data sources (local_vectors, firecrawl, etc.)
         session_id: Document session ID if applicable
     

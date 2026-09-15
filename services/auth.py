@@ -14,16 +14,14 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 
 from services.database import get_db_session, User
-
-from dotenv import load_dotenv
-load_dotenv()
+from config import settings
 
 
 # ==================== Configuration ====================
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "justiassist-secret-change-in-production-2026")
+JWT_SECRET_KEY = settings.JWT_SECRET_KEY.get_secret_value()
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", "24"))
+JWT_EXPIRY_HOURS = settings.JWT_EXPIRY_HOURS
 
 # Bearer token security scheme
 security = HTTPBearer(auto_error=False)

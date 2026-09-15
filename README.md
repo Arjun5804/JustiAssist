@@ -36,21 +36,25 @@ pip install -r requirements.txt
 copy .env.example .env
 
 # Edit .env with your settings:
+# - APP_ENV (development/production)
+# - JWT_SECRET_KEY (must be changed in production)
+# - GROQ_API_KEY (required for LLM)
 # - INDIAN_KANOON_API_KEY (optional, from api.indiankanoon.org)
-# - LITELLM_MODEL (default: ollama/llama3.2)
+# - FIRECRAWL_API_KEY (optional)
+# - ALLOWED_ORIGINS (CORS)
+# Note: Ollama is not required.
 ```
 
-### Step 3: Configure LLM (GPT-4 + Groq Fallback)
+### Step 3: Configure LLM (Groq Primary)
 
 The system uses:
-- **Primary**: GPT-4 (via LiteLLM)
-- **Fallback**: Llama 3.1 via Groq API
+- **Primary**: Llama 3.3 via Groq API
+- **Fallback**: Ollama (Optional)
 
 ```powershell
 # Edit .env with your API keys:
-LITELLM_MODEL=gpt-4
-LITELLM_API_KEY=sk-your-openai-key
 GROQ_API_KEY=gsk_your-groq-key
+GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
 Get your Groq API key from: https://console.groq.com/keys
@@ -293,18 +297,23 @@ curl -X POST http://localhost:8000/build-indices
 ## 📝 Configuration Options (.env)
 
 ```env
+# Environment & Security
+APP_ENV=development
+JWT_SECRET_KEY=justiassist-secret-change-in-production-2026
+JWT_EXPIRY_HOURS=24
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000
+
 # LLM Provider
-LITELLM_MODEL=ollama/llama3.2          # Local Ollama
-# LITELLM_MODEL=gpt-4                   # OpenAI (needs OPENAI_API_KEY)
-# LITELLM_MODEL=gemini/gemini-pro       # Google (needs GOOGLE_API_KEY)
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=llama-3.3-70b-versatile
 
-# API Keys
-INDIAN_KANOON_API_KEY=                  # For case law search
-OPENAI_API_KEY=                         # For GPT-4 fallback
-GOOGLE_API_KEY=                         # For Gemini
+# External APIs
+FIRECRAWL_API_KEY=fc-your-api-key-here
+INDIAN_KANOON_API_KEY=your_kanoon_key_here
 
-# Ollama
+# Ollama (Optional Fallback)
 OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2
 ```
 
 ---

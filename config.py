@@ -5,9 +5,69 @@ import os
 from pathlib import Path
 from typing import Dict, List, Tuple
 from enum import Enum
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, model_validator, SecretStr
+from typing_extensions import Self
 
-load_dotenv()
+
+# ==================== Application Settings ====================
+
+class Settings(BaseSettings):
+    """Authoritative Application Settings"""
+    
+    # Application
+    APP_NAME: str = "JustiAssist v2.0"
+    APP_ENV: str = Field(default="development", description="Environment: development, production, testing")
+    DEBUG: bool = False
+    
+    # Server
+    HOST: str = "0.0.0.0"
+    PORT: int = 8000
+    
+    # Security
+    JWT_SECRET_KEY: SecretStr = Field(default="justiassist-secret-change-in-production-2026")
+    JWT_EXPIRY_HOURS: int = 24
+    
+    # Database
+    DATABASE_URL: str = Field(default="sqlite:///justiassist.db")
+    
+    # LLM (Groq Primary)
+    GROQ_API_KEY: SecretStr = Field(default="")
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    
+    # LLM (Ollama Optional)
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3.2"
+    
+    # External APIs
+    FIRECRAWL_API_KEY: SecretStr = Field(default="")
+    INDIAN_KANOON_API_KEY: SecretStr = Field(default="")
+    
+    # CORS
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000"
+    
+    # Embedding Configuration
+    EMBEDDING_MODEL: str = "BAAI/bge-m3"
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+    
+    @model_validator(mode="after")
+    def validate_production_security(self) -> Self:
+        if self.APP_ENV == "production":
+            val = self.JWT_SECRET_KEY.get_secret_value() if self.JWT_SECRET_KEY else ""
+            if not val or val == "justiassist-secret-change-in-production-2026":
+                raise ValueError("JWT_SECRET_KEY must be set to a secure value in production.")
+            if len(val) < 32:
+                raise ValueError("JWT_SECRET_KEY must be at least 32 characters long in production.")
+        return self
+
+
+# The single authoritative configuration object
+settings = Settings()
 
 
 # ==================== Path Configuration ====================
@@ -195,9 +255,9 @@ class EmbeddingModel(Enum):
     MINILM = "sentence-transformers/all-MiniLM-L6-v2"  # Default, fast
     BGE_M3 = "BAAI/bge-m3"  # Higher quality, slower
 
-
 # Embedding selection (config-driven)
-EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL", EmbeddingModel.BGE_M3.value)
+# Map backward-compatible constant to the new settings object
+EMBEDDING_MODEL_NAME = settings.EMBEDDING_MODEL
 EMBEDDING_MODEL = EMBEDDING_MODEL_NAME
 
 
@@ -251,13 +311,10 @@ MIN_STATUTORY_CHUNKS = 3
 
 # ==================== LLM Configuration (Groq Primary) ====================
 
-# Groq Cloud — Primary LLM Provider
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-
-# Ollama — Local Fallback (used when Groq is unavailable)
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
+# Map old global variables to settings to preserve compatibility for existing consumers
+GROQ_MODEL = settings.GROQ_MODEL
+OLLAMA_BASE_URL = settings.OLLAMA_BASE_URL
+OLLAMA_MODEL = settings.OLLAMA_MODEL
 
 # LLM Parameters
 LLM_TEMPERATURE = 0.3
@@ -340,9 +397,10 @@ def log_config():
     print("=" * 60)
     print("JUSTIASSIST CONFIGURATION")
     print("=" * 60)
-    print(f"Primary LLM: Groq ({GROQ_MODEL})")
-    print(f"Fallback LLM: Ollama ({OLLAMA_MODEL})")
-    print(f"Embedding Model: {EMBEDDING_MODEL}")
+    print(f"Environment: {settings.APP_ENV}")
+    print(f"Primary LLM: Groq ({settings.GROQ_MODEL})")
+    print(f"Fallback LLM: Ollama ({settings.OLLAMA_MODEL})")
+    print(f"Embedding Model: {settings.EMBEDDING_MODEL}")
     print(f"Max Context Tokens: {MAX_CONTEXT_TOKENS}")
     print(f"Default Answer Mode: {DEFAULT_ANSWER_MODE.value}")
     print("=" * 60)

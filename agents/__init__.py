@@ -1,5 +1,5 @@
 """
-JustiAssist Agents Package — v2.0 with CrewAI
+JustiAssist Agents Package — v2.0 with Native Agents
 """
 
 from .query_classifier import QueryClassifier, QueryType

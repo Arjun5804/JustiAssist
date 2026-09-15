@@ -10,11 +10,10 @@ from pathlib import Path
 from sqlalchemy import create_engine, Column, Integer, String, Text, Float, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
-from dotenv import load_dotenv
-load_dotenv()
+from config import settings
 
 # Database setup
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///justiassist.db")
+DATABASE_URL = settings.DATABASE_URL
 
 # Convert relative path to absolute path within project root
 if DATABASE_URL.startswith("sqlite:///") and not DATABASE_URL.startswith("sqlite:////"):

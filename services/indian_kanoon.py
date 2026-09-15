@@ -5,7 +5,6 @@ Provides methods to search and retrieve legal documents from indiankanoon.org.
 API Documentation: https://api.indiankanoon.org/doc/
 """
 
-import os
 import json
 import logging
 import hashlib
@@ -14,6 +13,8 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, asdict
 import httpx
+
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -71,10 +72,10 @@ class IndianKanoonAPI:
         Initialize Indian Kanoon API client.
         
         Args:
-            api_key: API key from indiankanoon.org (or set INDIAN_KANOON_API_KEY env var)
+            api_key: API key from indiankanoon.org (or set INDIAN_KANOON_API_KEY in settings)
             cache_dir: Directory for caching responses (default: data/kanoon_cache)
         """
-        self.api_key = api_key or os.getenv('INDIAN_KANOON_API_KEY')
+        self.api_key = api_key or (settings.INDIAN_KANOON_API_KEY.get_secret_value() if settings.INDIAN_KANOON_API_KEY else "")
         
         if not self.api_key:
             logger.warning("Indian Kanoon API key not set. API calls will fail.")
