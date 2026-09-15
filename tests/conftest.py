@@ -84,5 +84,5 @@ def mock_lifespan_dependencies(mock_vector_store, mock_llm):
     Use this fixture for API smoke tests to mock out expensive lifespan dependencies.
     """
     with patch('reranker.LegalReranker.__init__', return_value=None), \
-         patch('agents.crew_orchestrator.JustiAssistCrew.__init__', return_value=None):
+         patch('agents.orchestrator.AgentOrchestrator.__init__', return_value=None):
         yield

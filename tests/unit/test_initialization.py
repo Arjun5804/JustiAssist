@@ -16,7 +16,7 @@ async def test_retrieval_pipeline_wiring():
          patch('app.ContextBuilder') as mock_cb_class, \
          patch('app.ConfidenceScorer') as mock_cs_class, \
          patch('retrieval.pipeline.RetrievalPipeline') as mock_rp_class, \
-         patch('app.JustiAssistCrew') as mock_crew_class, \
+         patch('app.AgentOrchestrator') as mock_crew_class, \
          patch('app.VECTOR_STORE_PATH') as mock_path, \
          patch('services.database.init_db'):
         
@@ -40,9 +40,9 @@ async def test_retrieval_pipeline_wiring():
                 reranker=mock_rr_instance
             )
             
-            # Verify Crew Orchestrator received the pipeline
+            # Verify Crew Orchestrator was initialized
             mock_crew_class.assert_called_once()
             _, kwargs = mock_crew_class.call_args
-            assert kwargs['retrieval_pipeline'] == deps.retrieval_pipeline
+            assert kwargs['vector_store'] == mock_vs_instance
             assert kwargs['vector_store'] == mock_vs_instance
 

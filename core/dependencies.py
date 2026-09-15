@@ -22,7 +22,7 @@ class DepsContainer:
         self.feedback_evaluator = None
         
         # Orchestrator (v2)
-        self.crew_orchestrator = None
+        self.agent_orchestrator = None
 
 # Global dependency instance
 deps = DepsContainer()

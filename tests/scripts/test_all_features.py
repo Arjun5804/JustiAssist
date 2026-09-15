@@ -9,7 +9,7 @@ async def main():
         reranker, context_builder, confidence_scorer, crew_orchestrator, vector_store
     )
     from vector_store import VectorStore
-    from agents.crew_orchestrator import JustiAssistCrew
+    from agents.orchestrator import AgentOrchestrator
     
     vs = VectorStore()
     vs.load()
@@ -22,15 +22,16 @@ async def main():
     cb = ContextBuilder()
     cs = ConfidenceScorer()
     
-    crew = JustiAssistCrew(
-        vector_store=vs,
-        reranker=rerank,
-        context_builder=cb,
-        confidence_scorer=cs
-    )
+    from types import SimpleNamespace
+    deps = SimpleNamespace(vector_store=vs, reranker=rerank)
     
-    print("\n" + "="*50)
-    print("TESTING LEGAL QUERY (BNS 304)")
+    deps.agent_orchestrator = AgentOrchestrator(
+        vector_store=deps.vector_store,
+        reranker=deps.reranker
+    )
+    print("AgentOrchestrator Initialized")
+    crew = deps.agent_orchestrator
+    
     print("="*50)
     
     query = "Tell me about BNS 304"

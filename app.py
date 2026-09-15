@@ -30,7 +30,7 @@ from services.chat_memory import (
     save_message, get_history, get_recent_conversations,
     clear_history, format_history_for_context
 )
-from agents.crew_orchestrator import JustiAssistCrew, CrewResult
+from agents.orchestrator import AgentOrchestrator
 
 from config import (
     VECTOR_STORE_PATH, 
@@ -121,15 +121,12 @@ async def lifespan(app: FastAPI):
         reranker=deps.reranker
     )
     
-    # v2.0: Initialize CrewAI Orchestrator
-    deps.crew_orchestrator = JustiAssistCrew(
+    # v2.0: Initialize Agent Orchestrator
+    deps.agent_orchestrator = AgentOrchestrator(
         vector_store=deps.vector_store,
-        reranker=deps.reranker,
-        context_builder=deps.context_builder,
-        confidence_scorer=deps.confidence_scorer,
-        retrieval_pipeline=deps.retrieval_pipeline
+        reranker=deps.reranker
     )
-    print("CrewAI Orchestrator initialized with 5 agents")
+    print("Agent Orchestrator initialized with 5 native agents")
     
     # Initialize database
     from services.database import init_db
