@@ -22,6 +22,7 @@ class QueryRequest(BaseModel):
     custody_days: Optional[int] = Field(default=None, ge=0)
     offense_sections: Optional[List[str]] = Field(default=None)
     session_id: Optional[str] = Field(default=None, description="Session ID for uploaded documents")
+    conversation_id: Optional[str] = Field(default=None, description="ID for persistent chat thread")
 
 class Citation(BaseModel):
     section: str
@@ -91,7 +92,7 @@ async def process_query_endpoint(
         raise HTTPException(status_code=503, detail="Agent Orchestrator not initialized.")
 
     query = request.query.strip()
-    conversation_id = request.session_id or str(uuid.uuid4())[:12]
+    conversation_id = request.conversation_id or str(uuid.uuid4())[:12]
     
     chat_context = ""
     if user:
@@ -101,10 +102,14 @@ async def process_query_endpoint(
             max_messages=6,
             max_chars=2000
         )
-        save_message(
-            user_id=user.id, role="user", content=query,
-            conversation_id=conversation_id, session_id=request.session_id
-        )
+        from core.exceptions import ConversationOwnershipError
+        try:
+            save_message(
+                user_id=user.id, role="user", content=query,
+                conversation_id=conversation_id, session_id=request.session_id
+            )
+        except ConversationOwnershipError as e:
+            raise HTTPException(status_code=403, detail=str(e))
 
     state = AgentState(
         query=query,
@@ -137,6 +142,7 @@ async def query_stream_endpoint(
     query: str,
     mode: str = "auto",
     session_id: str = None,
+    conversation_id: str = None,
     custody_days: int = None,
     offense_sections: List[str] = None,
     token: str = None,
@@ -156,11 +162,16 @@ async def query_stream_endpoint(
             
     async def event_generator():
         try:
-            conversation_id = session_id or str(uuid.uuid4())[:12]
+            conv_id = conversation_id or str(uuid.uuid4())[:12]
             chat_context = ""
             if user:
-                chat_context = format_history_for_context(user_id=user.id, conversation_id=conversation_id)
-                save_message(user_id=user.id, role="user", content=query, conversation_id=conversation_id, session_id=session_id)
+                chat_context = format_history_for_context(user_id=user.id, conversation_id=conv_id)
+                from core.exceptions import ConversationOwnershipError
+                try:
+                    save_message(user_id=user.id, role="user", content=query, conversation_id=conv_id, session_id=session_id)
+                except ConversationOwnershipError as e:
+                    yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+                    return
                 
             state = AgentState(
                 query=query.strip(),
@@ -202,7 +213,7 @@ async def query_stream_endpoint(
                         qtype_val = final_state.query_type.value if hasattr(final_state.query_type, 'value') else final_state.query_type
                         save_message(
                             user_id=user.id, role="assistant", content=final_state.final_answer,
-                            conversation_id=conversation_id, query_type=qtype_val,
+                            conversation_id=conv_id, query_type=qtype_val,
                             confidence_score=final_state.confidence_score, grounding_status=final_state.grounding_status,
                             agents_used=final_state.agents_used, sources_used=final_state.sources_used,
                             session_id=session_id

@@ -8,8 +8,10 @@ import json
 import uuid
 from datetime import datetime
 from typing import List, Optional, Dict, Any
+from datetime import timedelta
 
 from services.database import get_db_session, ChatMessage
+from core.exceptions import ConversationOwnershipError
 
 
 # ==================== Core CRUD ====================
@@ -46,6 +48,29 @@ def save_message(
     """
     db = get_db_session()
     try:
+        if conversation_id:
+            # Check ownership
+            existing_msg = db.query(ChatMessage).filter(ChatMessage.conversation_id == conversation_id).first()
+            if existing_msg and existing_msg.user_id != user_id:
+                raise ConversationOwnershipError(f"Conversation {conversation_id} belongs to another user")
+                
+            # Best-effort duplicate suppression
+            if role == "user":
+                recent_cutoff = datetime.utcnow() - timedelta(seconds=2)
+                dup_msg = (
+                    db.query(ChatMessage)
+                    .filter(
+                        ChatMessage.conversation_id == conversation_id,
+                        ChatMessage.user_id == user_id,
+                        ChatMessage.role == role,
+                        ChatMessage.content == content,
+                        ChatMessage.created_at >= recent_cutoff
+                    )
+                    .first()
+                )
+                if dup_msg:
+                    return dup_msg
+
         message = ChatMessage(
             user_id=user_id,
             role=role,
@@ -59,10 +84,15 @@ def save_message(
             session_id=session_id,
             created_at=datetime.utcnow(),
         )
-        db.add(message)
-        db.commit()
-        db.refresh(message)
-        return message
+        
+        try:
+            db.add(message)
+            db.commit()
+            db.refresh(message)
+            return message
+        except Exception:
+            db.rollback()
+            raise
     finally:
         db.close()
 
@@ -114,13 +144,12 @@ def get_recent_conversations(user_id: int, limit: int = 10) -> List[Dict[str, An
     """
     db = get_db_session()
     try:
-        from sqlalchemy import func, distinct
+        from sqlalchemy import func
 
-        # Get distinct conversation IDs with their latest timestamp
+        # Get grouped stats for recent conversations
         conversations = (
             db.query(
                 ChatMessage.conversation_id,
-                func.min(ChatMessage.content).label("first_message"),
                 func.max(ChatMessage.created_at).label("last_active"),
                 func.count(ChatMessage.id).label("message_count"),
             )
@@ -134,15 +163,30 @@ def get_recent_conversations(user_id: int, limit: int = 10) -> List[Dict[str, An
             .all()
         )
 
-        return [
-            {
+        results = []
+        for c in conversations:
+            # Fetch the chronological first message explicitly
+            first_msg_query = (
+                db.query(ChatMessage.content)
+                .filter(
+                    ChatMessage.conversation_id == c.conversation_id,
+                    ChatMessage.user_id == user_id,
+                    ChatMessage.role == "user"
+                )
+                .order_by(ChatMessage.created_at.asc())
+                .first()
+            )
+            
+            msg_text = first_msg_query[0] if first_msg_query else ""
+            
+            results.append({
                 "conversation_id": c.conversation_id,
-                "preview": c.first_message[:100] + "..." if len(c.first_message) > 100 else c.first_message,
+                "preview": msg_text[:100] + "..." if len(msg_text) > 100 else msg_text,
                 "last_active": c.last_active.isoformat() if c.last_active else None,
                 "message_count": c.message_count,
-            }
-            for c in conversations
-        ]
+            })
+            
+        return results
     finally:
         db.close()
 
@@ -166,9 +210,13 @@ def clear_history(user_id: int, conversation_id: str = None) -> int:
             query = query.filter(ChatMessage.conversation_id == conversation_id)
 
         count = query.count()
-        query.delete()
-        db.commit()
-        return count
+        try:
+            query.delete()
+            db.commit()
+            return count
+        except Exception:
+            db.rollback()
+            raise
     finally:
         db.close()
 
