@@ -52,7 +52,7 @@ services:
       - REDIS_ENABLED=true
       - REDIS_URL=redis://redis:6379
       - STORAGE_PROVIDER=local
-      - LOCAL_STORAGE_ROOT=/.data/storage
+      - LOCAL_STORAGE_ROOT=/app/.data/storage
       - GROQ_API_KEY=${GROQ_API_KEY}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-default_secret_for_local_dev_only}
     volumes:

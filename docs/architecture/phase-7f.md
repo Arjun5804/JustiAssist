@@ -21,7 +21,7 @@ The strategy intentionally avoids baking large stateful components (PostgreSQL, 
 - **Nginx Configuration**: Replaces the Vite development proxy. It serves the Single Page Application (SPA) and safely routes all `/api/`, `/query`, `/session/`, and other backend-specific paths directly to the backend container.
 
 ## Orchestration (Docker Compose)
-A 4-service `docker-compose.yml` provides the local development and demonstration environment.
+A 5-service `docker-compose.yml` provides the local development and demonstration environment.
 
 ### Services
 1. **`postgres`**: A persistent PostgreSQL 15 database (`postgres:15-alpine`) mapped to a local volume (`postgres_data`). Health is verified via `pg_isready`.
