@@ -36,7 +36,7 @@ export default function AuthPage() {
       if (!result.success) {
         setError(result.error)
       }
-    } catch (err) {
+    } catch {
       setError('Connection error. Please try again.')
     } finally {
       setIsLoading(false)

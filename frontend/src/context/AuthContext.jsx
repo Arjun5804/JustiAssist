@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * JustiAssist Auth Context
  * Global authentication state management with JWT tokens.
@@ -19,6 +20,7 @@ export function AuthProvider({ children }) {
     } else {
       setIsLoading(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const verifyToken = async () => {

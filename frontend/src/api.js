@@ -36,7 +36,7 @@ export const apiLogin = async (email, password) => {
             body: JSON.stringify({ email, password }),
         })
         return await res.json()
-    } catch (err) {
+    } catch {
         return { detail: 'Connection error' }
     }
 }
@@ -52,7 +52,7 @@ export const apiSignup = async (email, password, display_name) => {
             body: JSON.stringify({ email, password, display_name }),
         })
         return await res.json()
-    } catch (err) {
+    } catch {
         return { detail: 'Connection error' }
     }
 }

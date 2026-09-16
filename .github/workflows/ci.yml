@@ -13,7 +13,7 @@ jobs:
     env:
       APP_ENV: testing
       JWT_SECRET_KEY: testing-secret-key-do-not-use-in-production
-      DATABASE_URL: sqlite+aiosqlite:///./test_ci.db
+      DATABASE_URL: sqlite:///./test_ci.db
     
     steps:
       - name: Checkout repository
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_ENV: testing
-      DATABASE_URL: sqlite+aiosqlite:///./test_ci.db
+      DATABASE_URL: sqlite:///./test_ci.db
     
     steps:
       - name: Checkout repository
@@ -59,7 +59,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Alembic check
-        run: alembic check
+        run: |
+          alembic upgrade head
+          alembic check
 
   frontend:
     name: Frontend Validation

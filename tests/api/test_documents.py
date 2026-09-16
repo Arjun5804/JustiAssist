@@ -20,6 +20,8 @@ def test_user():
         u = User(id=user_id, email="doc_user@test.com", display_name="Doc User", hashed_password="pw")
         db.add(u)
         db.commit()
+    db.refresh(u)
+    db.expunge(u)
     db.close()
     return u
 

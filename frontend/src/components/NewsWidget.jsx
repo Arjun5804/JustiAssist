@@ -20,7 +20,7 @@ function NewsWidget({ fullPage = false }) {
             }
             const data = await response.json()
             setNews(data.articles || [])
-        } catch (err) {
+        } catch {
             // Show placeholder news for demo — with real legal news source links
             setNews([
                 {

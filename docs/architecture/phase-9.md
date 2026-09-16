@@ -30,7 +30,7 @@ The workflow runs automatically on:
 The test environment runs with specific environment variables designed to bypass external service dependencies and production credentials:
 - `APP_ENV=testing`
 - `JWT_SECRET_KEY` set to a safe dummy value.
-- `DATABASE_URL` set to `sqlite+aiosqlite:///./test_ci.db`.
+- `DATABASE_URL` set to `sqlite:///./test_ci.db`.
 
 **External Services Excluded**:
 - No live network calls to Groq API, Firecrawl API, or Indian Kanoon. Tests rely on the mocked retrieval setup established in Phase 5.

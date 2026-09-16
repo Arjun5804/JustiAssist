@@ -4,7 +4,6 @@ import Loader from './Loader'
 
 function DocumentReview({ onBack }) {
     const [file, setFile] = useState(null)
-    const [sessionId, setSessionId] = useState(null)
     const [uploadedDoc, setUploadedDoc] = useState(null)
     const [isUploading, setIsUploading] = useState(false)
     const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -64,7 +63,6 @@ function DocumentReview({ onBack }) {
             }
 
             const result = await response.json()
-            setSessionId(result.session_id)
             setUploadedDoc({
                 name: file.name,
                 type: result.document_type,
@@ -154,7 +152,6 @@ function DocumentReview({ onBack }) {
     const resetReview = () => {
         setFile(null)
         setUploadedDoc(null)
-        setSessionId(null)
         setAnalysis(null)
         setError(null)
     }

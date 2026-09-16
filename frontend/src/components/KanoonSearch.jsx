@@ -40,7 +40,7 @@ function KanoonSearch() {
             } else {
                 setResults(data)
             }
-        } catch (err) {
+        } catch {
             setError('Failed to search Indian Kanoon')
         } finally {
             setIsLoading(false)
