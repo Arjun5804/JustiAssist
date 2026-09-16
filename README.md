@@ -1,5 +1,7 @@
 # JustiAssist v2.0
 
+[![JustiAssist CI](https://github.com/Arjun5804/JustiAssist/actions/workflows/ci.yml/badge.svg)](https://github.com/Arjun5804/JustiAssist/actions/workflows/ci.yml)
+
 **Intelligent Legal AI for Indian Bail Jurisprudence**
 
 A RAG-based legal assistant that provides grounded answers on Indian law, with specialized support for bail queries, document drafting, and real-time legal news.
