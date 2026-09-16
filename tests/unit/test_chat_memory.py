@@ -11,6 +11,8 @@ from services.database import get_db_session, ChatMessage
 from core.exceptions import ConversationOwnershipError
 from services.auth import create_access_token
 
+pytestmark = pytest.mark.asyncio
+
 @pytest.fixture(autouse=True)
 def clean_db():
     db = get_db_session()
@@ -19,16 +21,16 @@ def clean_db():
     db.close()
     yield
 
-def test_persistence_basic():
+async def test_persistence_basic():
     # Save user message
-    msg1 = save_message(user_id=1, role="user", content="Hello", session_id="s1")
+    msg1 = await save_message(user_id=1, role="user", content="Hello", session_id="s1")
     assert msg1.id is not None
     assert msg1.conversation_id is not None
     assert msg1.role == "user"
     assert msg1.session_id == "s1"
     
     # Save assistant message
-    msg2 = save_message(
+    msg2 = await save_message(
         user_id=1, role="assistant", content="Hi there",
         conversation_id=msg1.conversation_id,
         query_type="legal",
@@ -46,66 +48,66 @@ def test_persistence_basic():
     assert "Agent1" in msg2.agents_used
     assert "Source1" in msg2.sources_used
 
-def test_conversation_continuity():
+async def test_conversation_continuity():
     # First message generates ID
-    msg1 = save_message(user_id=1, role="user", content="Q1")
+    msg1 = await save_message(user_id=1, role="user", content="Q1")
     assert msg1.conversation_id is not None
     
     # Subsequent keeps ID
-    msg2 = save_message(user_id=1, role="user", content="Q2", conversation_id=msg1.conversation_id)
+    msg2 = await save_message(user_id=1, role="user", content="Q2", conversation_id=msg1.conversation_id)
     assert msg2.conversation_id == msg1.conversation_id
     
     # Different conversation
-    msg3 = save_message(user_id=1, role="user", content="Q3")
+    msg3 = await save_message(user_id=1, role="user", content="Q3")
     assert msg3.conversation_id != msg1.conversation_id
 
-def test_isolation():
-    msg_a = save_message(user_id=1, role="user", content="A")
-    msg_b = save_message(user_id=2, role="user", content="B")
+async def test_isolation():
+    msg_a = await save_message(user_id=1, role="user", content="A")
+    msg_b = await save_message(user_id=2, role="user", content="B")
     
     # User 1 cannot retrieve User 2
-    hist_a = get_history(user_id=1)
+    hist_a = await get_history(user_id=1)
     assert len(hist_a) == 1
     assert hist_a[0]["content"] == "A"
     
     # Cannot retrieve B's convo by ID
-    hist_b_by_a = get_history(user_id=1, conversation_id=msg_b.conversation_id)
+    hist_b_by_a = await get_history(user_id=1, conversation_id=msg_b.conversation_id)
     assert len(hist_b_by_a) == 0
     
     # Cannot save into B's convo
     with pytest.raises(ConversationOwnershipError):
-        save_message(user_id=1, role="user", content="Hacked", conversation_id=msg_b.conversation_id)
+        await save_message(user_id=1, role="user", content="Hacked", conversation_id=msg_b.conversation_id)
         
     # Cannot delete B's history
-    clear_history(user_id=1)
-    hist_b = get_history(user_id=2)
+    await clear_history(user_id=1)
+    hist_b = await get_history(user_id=2)
     assert len(hist_b) == 1
 
-def test_history_ordering_and_pagination():
+async def test_history_ordering_and_pagination():
     cid = "test-conv"
     for i in range(5):
-        save_message(user_id=1, role="user", content=str(i), conversation_id=cid)
+        await save_message(user_id=1, role="user", content=str(i), conversation_id=cid)
         
-    hist = get_history(user_id=1, conversation_id=cid, limit=3, offset=0)
+    hist = await get_history(user_id=1, conversation_id=cid, limit=3, offset=0)
     assert len(hist) == 3
     # Ordered chronologically means newest are at the end, but the query returns descending offset.
     # Actually if we have 0,1,2,3,4. Descending limit 3 is 4,3,2. Reversed is 2,3,4
     assert [m["content"] for m in hist] == ["2", "3", "4"]
     
-    hist_next = get_history(user_id=1, conversation_id=cid, limit=3, offset=3)
+    hist_next = await get_history(user_id=1, conversation_id=cid, limit=3, offset=3)
     assert len(hist_next) == 2
     assert [m["content"] for m in hist_next] == ["0", "1"]
 
-def test_recent_conversations():
+async def test_recent_conversations():
     import time
-    save_message(user_id=1, role="user", content="Old Q", conversation_id="c1")
+    await save_message(user_id=1, role="user", content="Old Q", conversation_id="c1")
     time.sleep(0.1)
-    save_message(user_id=1, role="user", content="New Q", conversation_id="c2")
+    await save_message(user_id=1, role="user", content="New Q", conversation_id="c2")
     time.sleep(0.1)
-    save_message(user_id=1, role="user", content="Old Q follow", conversation_id="c1")
+    await save_message(user_id=1, role="user", content="Old Q follow", conversation_id="c1")
     
     # Should order by last active (c1 is newer active, even though c2 was created later)
-    recent = get_recent_conversations(user_id=1)
+    recent = await get_recent_conversations(user_id=1)
     assert len(recent) == 2
     assert recent[0]["conversation_id"] == "c1"
     assert recent[0]["preview"] == "Old Q" # The TRUE chronological first message
@@ -114,7 +116,7 @@ def test_recent_conversations():
     assert recent[1]["conversation_id"] == "c2"
     assert recent[1]["preview"] == "New Q"
 
-def test_transaction_rollback():
+async def test_transaction_rollback():
     db = get_db_session()
     count_before = db.query(ChatMessage).count()
     db.close()
@@ -125,20 +127,20 @@ def test_transaction_rollback():
         mock_get_db.return_value = mock_db
         
         with pytest.raises(Exception, match="DB Error"):
-            save_message(user_id=1, role="user", content="Fail")
+            await save_message(user_id=1, role="user", content="Fail")
             
         assert mock_db.rollback.called
         
-def test_duplicate_suppression():
-    msg1 = save_message(user_id=1, role="user", content="Dup", conversation_id="c1")
-    msg2 = save_message(user_id=1, role="user", content="Dup", conversation_id="c1")
+async def test_duplicate_suppression():
+    msg1 = await save_message(user_id=1, role="user", content="Dup", conversation_id="c1")
+    msg2 = await save_message(user_id=1, role="user", content="Dup", conversation_id="c1")
     assert msg1.id == msg2.id # Same ID due to suppression
     
     # Different role shouldn't suppress
-    msg3 = save_message(user_id=1, role="assistant", content="Dup", conversation_id="c1")
+    msg3 = await save_message(user_id=1, role="assistant", content="Dup", conversation_id="c1")
     assert msg1.id != msg3.id
 
-def test_session_id_vs_conversation_id(mock_lifespan_dependencies):
+async def test_session_id_vs_conversation_id(mock_lifespan_dependencies):
     """Explicit regression test for session_id vs conversation_id"""
     db = get_db_session()
     from services.database import User
@@ -183,7 +185,7 @@ def test_session_id_vs_conversation_id(mock_lifespan_dependencies):
             
             client.post("/query", json=req, headers=headers)
             
-        hist = get_history(user_id=999, conversation_id="thread_88")
+        hist = await get_history(user_id=999, conversation_id="thread_88")
         assert len(hist) == 2 # User and assistant
         for h in hist:
             assert h["conversation_id"] == "thread_88"

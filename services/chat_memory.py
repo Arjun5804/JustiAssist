@@ -100,11 +100,11 @@ async def get_history(
     Retrieve chat history for a user.
     """
     cache_key = None
-    if conversation_id and offset == 0 and limit == 20: # Only cache the standard first-page load
+    if conversation_id and offset == 0 and limit <= 20: # Use canonical first page
         cache_key = f"justiassist:v1:chat:history:{user_id}:{conversation_id}"
         cached_val = await cache.get(cache_key)
         if cached_val is not None:
-            return cached_val
+            return cached_val[-limit:] if limit > 0 else []
 
     db = get_db_session()
     try:
@@ -113,10 +113,12 @@ async def get_history(
         if conversation_id:
             query = query.filter(ChatMessage.conversation_id == conversation_id)
 
+        fetch_limit = 20 if cache_key else limit
+        
         messages = (
             query.order_by(ChatMessage.created_at.desc())
             .offset(offset)
-            .limit(limit)
+            .limit(fetch_limit)
             .all()
         )
 
@@ -125,6 +127,7 @@ async def get_history(
         
         if cache_key:
             await cache.set(cache_key, results, ttl=3600)
+            return results[-limit:] if limit > 0 else []
             
         return results
     finally:
