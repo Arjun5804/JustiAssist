@@ -67,8 +67,6 @@ from services.news_scraper import get_news_scraper
 from services.pipeline_events import SyncPipelineEmitter
 from reranker import LegalReranker
 from retrieval.models import SearchResult as RerankSearchResult
-from context_builder import ContextBuilder
-from confidence_scorer import ConfidenceScorer
 
 
 # Logging setup
@@ -101,11 +99,9 @@ async def lifespan(app: FastAPI):
     
     # Initialize enhanced RAG components
     deps.reranker = LegalReranker(mode='balanced')
-    deps.context_builder = ContextBuilder()
     
     # RetrievalPipeline will be initialized after VectorStore is loaded
-    deps.confidence_scorer = ConfidenceScorer()
-    print("Enhanced RAG: reranker, context builder, confidence scorer initialized")
+    print("Enhanced RAG: reranker initialized")
     
     # Load vector store
     deps.vector_store = VectorStore()

@@ -5,16 +5,13 @@ from unittest.mock import MagicMock, patch
 def mock_app_module():
     with patch('app.VectorStore') as mock_vs, \
          patch('app.LegalReranker') as mock_rr, \
-         patch('app.ContextBuilder') as mock_cb, \
          patch('retrieval.pipeline.RetrievalPipeline') as mock_rp:
-        yield mock_vs, mock_rr, mock_cb, mock_rp
+        yield mock_vs, mock_rr, None, mock_rp
 
 @pytest.mark.asyncio
 async def test_retrieval_pipeline_wiring():
     with patch('app.VectorStore') as mock_vs_class, \
          patch('app.LegalReranker') as mock_rr_class, \
-         patch('app.ContextBuilder') as mock_cb_class, \
-         patch('app.ConfidenceScorer') as mock_cs_class, \
          patch('retrieval.pipeline.RetrievalPipeline') as mock_rp_class, \
          patch('app.AgentOrchestrator') as mock_crew_class, \
          patch('app.VECTOR_STORE_PATH') as mock_path:

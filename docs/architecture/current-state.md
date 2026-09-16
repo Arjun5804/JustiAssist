@@ -295,8 +295,6 @@ There is also `colab_build.ipynb` for building indices in Google Colab.
 1. **Legacy `/query` endpoint** (line 584) duplicates the entire v2 pipeline from `crew_orchestrator.process_query()` — same retrieval, reranking, confidence scoring, generation, citation validation, and enrichment logic is repeated inline across ~500 lines.
 2. **Legacy `/api/query/stream`** (line 1908) duplicates the v2 SSE streaming logic.
 3. **`services/hybrid_retriever.py`** defines `HybridContext`, `KanoonCase`, `NewsItem` dataclasses that overlap with equivalents in `crew_orchestrator.py` — the hybrid retriever appears partially integrated but largely bypassed.
-4. **`tests/confidence_scorer.py`** is a full copy of `confidence_scorer.py` (428 lines) placed in `tests/` — not a test, but a duplicate module.
-5. **`bail_lookup.py`** exists at root — utility for bail provisions lookup, similar functionality to `BailEvaluator`.
 
 ---
 
@@ -383,7 +381,6 @@ There is also `colab_build.ipynb` for building indices in Google Colab.
 | `tests/test_all_features.py` | Integration | Full crew orchestration + Firecrawl + news | ❌ (script with `if __name__`) |
 | `tests/verify_fix.py` | Integration | Confidence scorer section override | ❌ (script) |
 | `tests/verify_news_fix.py` | Integration | News scraper source field fix | ❌ (script) |
-| `tests/confidence_scorer.py` | **Duplicate** | Copy of `confidence_scorer.py` (not a test) | ❌ |
 | `evaluation/eval_harness.py` | Evaluation | Offline retrieval accuracy + confidence alignment | ❌ (standalone script) |
 
 ### Test Infrastructure Issues
@@ -421,7 +418,6 @@ Tests were collected by pytest (4 discovered). Execution requires loading the em
 | **P1-3** | **No rate limiting** — endpoints have no rate limiting (except internal Indian Kanoon client). | Abuse risk, API cost exposure |
 | **P1-4** | **Hardcoded JWT secret** — `JWT_SECRET_KEY = "justiassist-secret-change-in-production-2026"` as default. | Security vulnerability |
 | **P1-5** | **SQLite init on import** — `services/database.py` calls `init_db()` at module import time (line 125), creating tables as a side-effect of importing the module. | Blocks test isolation |
-| **P1-6** | **Duplicate module** — `tests/confidence_scorer.py` is a 428-line copy of `confidence_scorer.py`, not a test. Creates import confusion. | Maintenance confusion |
 | **P1-7** | **Global mutable state** — 8 global variables in `app.py` (line 78-91) initialized in `lifespan()`. Thread-unsafe. | Race conditions |
 | **P1-8** | **No structured logging** — mix of `print()` and `logger` calls throughout. Debug print statements in production code (e.g., line 430: `print(f"FIRECRAWL DEBUG OUTPUT")`). | Noisy logs, no log levels |
 
@@ -459,7 +455,6 @@ JustiAssist/
 ├── document_session.py       # In-memory uploaded document manager
 ├── audit_logger.py           # JSONL audit logging
 ├── metrics.py                # In-memory metrics collection
-├── bail_lookup.py            # Bail provisions utility
 ├── requirements.txt          # Python dependencies
 ├── .env.example              # Environment template
 ├── justiassist.db            # SQLite database (users, chat)

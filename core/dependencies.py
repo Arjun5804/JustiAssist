@@ -10,8 +10,6 @@ class DepsContainer:
         # Core RAG
         self.vector_store = None
         self.reranker = None
-        self.context_builder = None
-        self.confidence_scorer = None
         self.llm_provider = None
         self.retrieval_pipeline = None
         
