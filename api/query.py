@@ -45,6 +45,11 @@ class NewsContextResponse(BaseModel):
     date: str
     url: str = ""
 
+class VerificationSummary(BaseModel):
+    claim_id: str
+    verdict: str
+    evidence_ids: List[str]
+
 class QueryResponse(BaseModel):
     query: str
     query_type: str
@@ -58,11 +63,24 @@ class QueryResponse(BaseModel):
     news_context: List[NewsContextResponse] = []
     sources_used: List[str] = []
     fetch_times_ms: dict = {}
+    is_abstention: bool = False
+    verification_verdicts: List[VerificationSummary] = Field(default_factory=list)
 
 router = APIRouter()
 
 def _state_to_response(state: AgentState) -> QueryResponse:
     qtype_val = state.query_type.value if hasattr(state.query_type, 'value') else state.query_type
+    
+    verifications = []
+    if getattr(state, "generated_response", None) and getattr(state.generated_response, "verifications", None):
+        for v in state.generated_response.verifications:
+            verdict_str = v.verdict.value if hasattr(v.verdict, 'value') else str(v.verdict)
+            verifications.append(VerificationSummary(
+                claim_id=v.claim_id,
+                verdict=verdict_str,
+                evidence_ids=v.evidence_ids
+            ))
+            
     return QueryResponse(
         query=state.query,
         query_type=qtype_val,
@@ -75,7 +93,9 @@ def _state_to_response(state: AgentState) -> QueryResponse:
         kanoon_cases=[KanoonCaseResponse(**k) for k in state.kanoon_cases],
         news_context=[NewsContextResponse(**n) for n in state.news_context],
         sources_used=state.sources_used,
-        fetch_times_ms={}
+        fetch_times_ms={},
+        is_abstention=state.is_abstention,
+        verification_verdicts=verifications
     )
 
 @router.post("/query", response_model=QueryResponse)

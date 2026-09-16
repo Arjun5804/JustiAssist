@@ -34,6 +34,7 @@ class AgentState:
     generated_response: Optional[GeneratedResponse] = None
     final_answer: Optional[str] = None
     citations: List[Dict[str, Any]] = field(default_factory=list)
+    is_abstention: bool = False
     
     # Metadata for UI
     processing_info: Dict[str, Any] = field(default_factory=dict)

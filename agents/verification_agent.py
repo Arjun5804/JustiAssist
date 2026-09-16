@@ -23,6 +23,7 @@ class VerificationAgent(Agent):
             state.confidence_score = 0.0
             state.grounding_status = "fail"
             state.has_verified = True
+            state.is_abstention = True
             state.processing_info.setdefault("steps", []).append("✓ VerificationAgent: Confirmed abstention")
             return AgentResult(success=True, state=state)
             
@@ -37,6 +38,7 @@ class VerificationAgent(Agent):
             state.confidence_score = 0.0
             state.grounding_status = "fail"
             state.has_verified = True
+            state.is_abstention = True
             state.processing_info.setdefault("steps", []).append("⚠ VerificationAgent: Rejected response due to incomplete or mismatched verification results")
             return AgentResult(success=True, state=state)
             
@@ -48,6 +50,7 @@ class VerificationAgent(Agent):
             state.confidence_score = 0.0
             state.grounding_status = "fail"
             state.has_verified = True
+            state.is_abstention = True
             state.processing_info.setdefault("steps", []).append("⚠ VerificationAgent: Rejected response due to unsupported claims leaking past generation")
             return AgentResult(success=True, state=state)
             
@@ -82,6 +85,7 @@ class VerificationAgent(Agent):
             state.confidence_score = 0.0
             state.grounding_status = "fail"
             state.has_verified = True
+            state.is_abstention = True
             state.processing_info.setdefault("steps", []).append("⚠ VerificationAgent: Rejected response due to missing citations")
             return AgentResult(success=True, state=state)
         
@@ -99,6 +103,7 @@ class VerificationAgent(Agent):
         state.final_answer = gen_response.answer
         state.citations = citations
         state.has_verified = True
+        state.is_abstention = False
         state.processing_info.setdefault("steps", []).append("✓ VerificationAgent: Final verification gate passed and citations built")
         
         return AgentResult(success=True, state=state)

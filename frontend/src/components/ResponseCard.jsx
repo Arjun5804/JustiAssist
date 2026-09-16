@@ -67,31 +67,6 @@ function ResponseCard({ response }) {
                 </div>
             )}
 
-            {/* CrewAI Agent Pipeline Badge (v2.0) */}
-            {response.agents_used && response.agents_used.length > 0 && (
-                <div className="agents-badge">
-                    <span className="agents-label">🤖 Agents:</span>
-                    {response.agents_used.map((agent, i) => (
-                        <span key={i} className="agent-tag">{agent}</span>
-                    ))}
-                </div>
-            )}
-
-            {/* Quality Review Badge (v2.0) */}
-            {response.quality_review && (
-                <div className={`quality-review-badge ${response.quality_review.passed ? 'passed' : 'flagged'}`}>
-                    <span className="qr-icon">
-                        {response.quality_review.passed ? '✅' : '⚠️'}
-                    </span>
-                    <span className="qr-text">
-                        {response.quality_review.passed ? 'Quality Verified' : 'Review Flagged'}
-                    </span>
-                    <span className="qr-detail">
-                        {response.quality_review.valid_citations}/{(response.quality_review.valid_citations || 0) + (response.quality_review.invalid_citations || 0)} citations verified
-                        {' · '}Grounding: {Math.round((response.quality_review.grounding_score || 0) * 100)}%
-                    </span>
-                </div>
-            )}
 
             {/* Main Answer */}
             <div className="answer-card glass-card">
@@ -176,23 +151,6 @@ function ResponseCard({ response }) {
                 </div>
             )}
 
-            {/* Web Sources from Firecrawl (v2.0) */}
-            {response.web_sources && response.web_sources.length > 0 && (
-                <div className="web-sources-card glass-card">
-                    <h3>
-                        <span className="section-icon">🌐</span>
-                        Web Sources
-                        <span className="web-badge">FIRECRAWL</span>
-                    </h3>
-                    <p className="section-subtitle">Supplementary information from the web</p>
-                    {response.web_sources.map((ws, i) => (
-                        <div key={i} className="web-source-item">
-                            <span className="ws-type">{ws.type}</span>
-                            <p className="ws-preview">{ws.content_preview}</p>
-                        </div>
-                    ))}
-                </div>
-            )}
 
             {/* Bail Assessment (conditional) */}
             {response.bail_assessment && (

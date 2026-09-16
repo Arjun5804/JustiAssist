@@ -29,7 +29,7 @@ function Header({ onShowAuth }) {
                     </div>
                 </div>
                 <p className="tagline">
-                    Agentic Legal AI — Powered by CrewAI
+                    Agentic Legal AI
                 </p>
             </div>
 

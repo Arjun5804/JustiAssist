@@ -159,7 +159,7 @@ function AppContent() {
             {/* Pipeline Visualizer - Shows during loading */}
             {isLoading && (
               <>
-                <Loader text="Processing your query..." hint="CrewAI agents working..." />
+                <Loader text="Processing your query..." hint="Analyzing your query..." />
                 <PipelineVisualizer stages={pipelineStages} />
               </>
             )}
