@@ -22,6 +22,15 @@ function ResponseCard({ response }) {
         return 'fail'
     }
 
+    const getGroundingLabel = (score) => {
+        if (score >= 0.7) return 'Strong'
+        if (score >= 0.4) return 'Moderate'
+        return 'Limited'
+    }
+
+    const isStatutory = (type) => ['ipc', 'crpc', 'bns', 'bnss', 'bsa', 'statutory', 'act'].includes(type?.toLowerCase());
+    const isUploaded = (type) => type?.toLowerCase() === 'user_upload' || type?.toLowerCase() === 'session_document';
+
     const confidencePercent = Math.round(response.confidence_score * 100)
 
     return (
@@ -33,14 +42,14 @@ function ResponseCard({ response }) {
                 </div>
 
                 <div className="confidence-meter">
-                    <span className="confidence-label">Confidence</span>
+                    <span className="confidence-label">Evidence Grounding</span>
                     <div className="confidence-bar">
                         <div
                             className={`confidence-fill ${getConfidenceClass(response.confidence_score)}`}
                             style={{ width: `${confidencePercent}%` }}
                         />
                     </div>
-                    <span className="confidence-value">{confidencePercent}%</span>
+                    <span className="confidence-value">{getGroundingLabel(response.confidence_score)}</span>
                 </div>
 
                 <div className={`grounding-status ${getGroundingClass(response.grounding_status)}`}>
@@ -68,14 +77,34 @@ function ResponseCard({ response }) {
             )}
 
 
-            {/* Main Answer */}
-            <div className="answer-card glass-card">
-                <h3>📋 Answer</h3>
-                <div
-                    className="answer-content"
-                    dangerouslySetInnerHTML={{ __html: formatAnswer(response.answer) }}
-                />
-            </div>
+            {/* Claim Verification Summary */}
+            {response.verification_verdicts && response.verification_verdicts.length > 0 && (
+                <div className="verification-summary-badge">
+                    <span className="verify-icon">✓</span>
+                    <span className="verify-text">
+                        {response.verification_verdicts.length} claim{response.verification_verdicts.length !== 1 ? 's' : ''} verified against available evidence
+                    </span>
+                </div>
+            )}
+
+            {/* Main Answer or Abstention */}
+            {response.is_abstention ? (
+                <div className="abstention-card glass-card">
+                    <h3>⚠️ Insufficient Evidence</h3>
+                    <p className="abstention-text">
+                        JustiAssist could not provide a reliable answer from the available evidence.
+                        Please refine your query or provide additional relevant material.
+                    </p>
+                </div>
+            ) : (
+                <div className="answer-card glass-card">
+                    <h3>📋 Answer</h3>
+                    <div
+                        className="answer-content"
+                        dangerouslySetInnerHTML={{ __html: formatAnswer(response.answer) }}
+                    />
+                </div>
+            )}
 
             {/* PROMINENT: Indian Kanoon Cases */}
             {response.kanoon_cases && response.kanoon_cases.length > 0 && (
@@ -185,13 +214,17 @@ function ResponseCard({ response }) {
             {/* Citations */}
             {response.citations && response.citations.length > 0 && (
                 <div className="citations-card glass-card">
-                    <h3>📖 Legal Citations</h3>
+                    <h3>{response.is_abstention ? '📂 Available Material' : '📖 Legal Evidence & Citations'}</h3>
                     <div className="citations-list">
                         {response.citations.map((citation, index) => (
                             <div key={index} className="citation-item">
                                 <div className="citation-header">
                                     <span className="citation-section">{citation.section}</span>
-                                    <span className="citation-type">{citation.law_type}</span>
+                                    <span className={`citation-type ${isStatutory(citation.law_type) ? 'statutory' : isUploaded(citation.law_type) ? 'uploaded' : 'external'}`}>
+                                        {isStatutory(citation.law_type) ? '📜 Statutory' : 
+                                         isUploaded(citation.law_type) ? '📁 Document' : 
+                                         citation.law_type}
+                                    </span>
                                     <span className="citation-score">
                                         {(citation.relevance_score * 100).toFixed(0)}% match
                                     </span>

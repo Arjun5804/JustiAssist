@@ -60,7 +60,7 @@ export const apiSignup = async (email, password, display_name) => {
 // ==================== SSE Connection ====================
 
 /**
- * Connect to SSE query stream (v2.0 — uses CrewAI pipeline)
+ * Connect to SSE query stream
  * @param {string} query The user question
  * @param {object} options Configuration (mode, sessionId, etc.)
  * @param {object} callbacks Event handlers (onStage, onComplete, onError)

@@ -41,7 +41,6 @@ function AppContent() {
     { id: 'score', name: 'Scoring', icon: '📊' },
     { id: 'web_search', name: 'Web Search', icon: '🌐' },
     { id: 'generate', name: 'Generating', icon: '✨' },
-    { id: 'quality_review', name: 'Quality Review', icon: '✅' },
   ]
 
   // SSE Connection for real-time pipeline updates
