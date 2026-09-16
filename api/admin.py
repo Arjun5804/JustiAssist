@@ -15,14 +15,42 @@ async def health_check():
     """Health check endpoint"""
     ollama_status = "unknown"
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=2.0) as client:
             response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
             ollama_status = "connected" if response.status_code == 200 else "error"
     except:
         ollama_status = "disconnected"
+        
+    db_status = "unknown"
+    try:
+        from services.database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"disconnected ({str(e)})"
+        
+    redis_status = "unknown"
+    try:
+        from services.cache import cache
+        if cache.enabled and cache.redis:
+            await cache.redis.ping()
+            redis_status = "connected"
+        elif not cache.enabled:
+            redis_status = "disabled"
+        else:
+            redis_status = "disconnected"
+    except Exception as e:
+        redis_status = f"disconnected ({str(e)})"
+    
+    # We do NOT return a 503 if Redis is down, only if DB is down.
+    status = "healthy" if db_status == "connected" else "unhealthy"
     
     return {
-        "status": "healthy",
+        "status": status,
+        "database": db_status,
+        "redis": redis_status,
         "ollama": ollama_status,
         "deps.vector_store": {
             "statutory_indexed": deps.vector_store.statutory_index is not None if deps.vector_store else False,

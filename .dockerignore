@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+.pytest_cache
+__pycache__
+venv/
+.data/
+vector_stores/
+justiassist.db
+frontend/
+docs/
+*.md
