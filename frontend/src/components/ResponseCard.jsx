@@ -79,10 +79,14 @@ function ResponseCard({ response }) {
 
             {/* Claim Verification Summary */}
             {response.verification_verdicts && response.verification_verdicts.length > 0 && (
-                <div className="verification-summary-badge">
-                    <span className="verify-icon">✓</span>
+                <div className={`verification-summary-badge ${response.is_abstention ? 'rejected' : 'verified'}`}>
+                    <span className="verify-icon">
+                        {response.is_abstention ? 'ℹ️' : '✓'}
+                    </span>
                     <span className="verify-text">
-                        {response.verification_verdicts.length} claim{response.verification_verdicts.length !== 1 ? 's' : ''} verified against available evidence
+                        {response.is_abstention 
+                            ? 'Evidence verification did not support a reliable answer' 
+                            : `${response.verification_verdicts.length} claim${response.verification_verdicts.length !== 1 ? 's' : ''} verified against available evidence`}
                     </span>
                 </div>
             )}

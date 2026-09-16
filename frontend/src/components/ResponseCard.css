@@ -664,6 +664,15 @@
     font-size: 1.1rem;
 }
 
+.verification-summary-badge.rejected {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+}
+.verification-summary-badge.rejected .verify-icon {
+    color: #d97706;
+}
+
 .abstention-card {
     padding: var(--spacing-lg);
     background: #fffbeb;
