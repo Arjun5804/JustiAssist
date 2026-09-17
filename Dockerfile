@@ -31,6 +31,8 @@ COPY --chown=justiassist:justiassist . .
 # Ensure entrypoint is executable
 RUN chmod +x entrypoint.sh
 
+ENV HF_HOME=/app/data/huggingface
+
 USER justiassist
 
 EXPOSE 8000
