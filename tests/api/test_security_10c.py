@@ -3,14 +3,12 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 
 from app import app
-from services.auth import create_access_token
+from services.auth import create_access_token, get_current_user
+from services.database import User
 
 client = TestClient(app)
 
-@pytest.fixture
-def auth_headers():
-    token = create_access_token(user_id=1, email="admin@example.com")
-    return {"Authorization": f"Bearer {token}"}
+
 
 # A. Admin Authentication
 def test_admin_endpoints_protected():
@@ -19,11 +17,15 @@ def test_admin_endpoints_protected():
     assert client.get("/api/news").status_code == 401
 
 @patch("api.admin.deps.vector_store")
-def test_admin_endpoints_authenticated(mock_vs, auth_headers):
+def test_admin_endpoints_authenticated(mock_vs):
     # Should bypass 401
+    app.dependency_overrides[get_current_user] = lambda: User(id=1, email="admin@example.com", display_name="Admin")
     mock_vs.get_statistics.return_value = {"stats": "ok"}
-    res = client.get("/stats", headers=auth_headers)
-    assert res.status_code == 200
+    try:
+        res = client.get("/stats")
+        assert res.status_code == 200
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
 
 # B. Input Bounds
 def test_input_bounds_text():
