@@ -168,16 +168,18 @@ async def query_stream_endpoint(
     conversation_id: str = None,
     custody_days: int = None,
     offense_sections: List[str] = None,
-    ticket: str = None,
-    header_user = Depends(get_current_user_optional)
+    ticket: str = None
 ):
     """
     Canonical SSE stream endpoint.
     Emits events while routing through the same AgentOrchestrator.
     """
-    user = header_user
-    if not user and ticket:
-        user = decode_sse_ticket(ticket)
+    if not ticket:
+        raise HTTPException(status_code=401, detail="Missing SSE ticket")
+        
+    user = decode_sse_ticket(ticket)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired SSE ticket")
             
     async def event_generator():
         try:

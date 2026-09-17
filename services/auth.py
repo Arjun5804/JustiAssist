@@ -109,13 +109,23 @@ def decode_sse_ticket(ticket: str) -> Optional[User]:
         payload = jwt.decode(ticket, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
         if payload.get("type") != "sse":
             return None
+            
+        sub = payload.get("sub")
+        if not sub:
+            return None
+            
+        try:
+            user_id = int(sub)
+        except (ValueError, TypeError):
+            return None
+            
         db = get_db_session()
         try:
-            user = db.query(User).filter(User.id == int(payload["sub"])).first()
+            user = db.query(User).filter(User.id == user_id).first()
             return user
         finally:
             db.close()
-    except JWTError:
+    except Exception:
         return None
 
 

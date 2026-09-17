@@ -92,10 +92,12 @@ export const connectSSE = (query, options = {}, callbacks = {}) => {
     };
 
     const fetchTicketAndConnect = async () => {
+        let ticket = null;
         try {
             const ticketRes = await authFetch('/api/auth/sse-ticket', { method: 'POST' });
             if (ticketRes.ok) {
-                const { ticket } = await ticketRes.json();
+                const data = await ticketRes.json();
+                ticket = data.ticket;
                 params.append('ticket', ticket);
             }
         } catch (err) {
@@ -103,6 +105,13 @@ export const connectSSE = (query, options = {}, callbacks = {}) => {
         }
 
         if (isClosed) return;
+
+        if (!ticket) {
+            console.error('Failed to obtain SSE ticket');
+            if (onError) onError('Connection unauthorized. Please log in again.');
+            proxy.close();
+            return;
+        }
 
         eventSource = new EventSource(`/api/v2/query/stream?${params.toString()}`);
 

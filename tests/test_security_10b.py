@@ -65,16 +65,13 @@ def test_user():
 
 def test_sse_missing_ticket(test_user):
     response = client.get("/api/query/stream?query=hello")
-    # Missing ticket -> user is not authenticated. Should yield error from orchestrator or raise 401?
-    # Actually if anonymous user isn't allowed, save_message might fail, but get_current_user_optional means user=None.
-    # The stream will output an error event eventually if authentication is required by agents, but let's check it doesn't leak.
-    # Wait, save_message raises ConversationOwnershipError if user is None? No, if user is None, chat_context is empty.
-    assert response.status_code == 200
+    assert response.status_code == 401
+    assert "Missing SSE ticket" in response.text
 
 def test_sse_invalid_ticket():
     response = client.get("/api/query/stream?query=hello&ticket=invalid.jwt.token")
-    assert response.status_code == 200
-    # user=None inside.
+    assert response.status_code == 401
+    assert "Invalid or expired SSE ticket" in response.text
 
 def test_sse_expired_ticket(test_user):
     expire = datetime.utcnow() - timedelta(seconds=30)
@@ -87,13 +84,12 @@ def test_sse_expired_ticket(test_user):
     }
     ticket = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
     response = client.get(f"/api/query/stream?query=hello&ticket={ticket}")
-    assert response.status_code == 200
+    assert response.status_code == 401
 
 def test_ordinary_access_jwt_used_as_ticket_rejected(test_user):
     token = create_access_token(test_user, "test@example.com")
     response = client.get(f"/api/query/stream?query=hello&ticket={token}")
-    assert response.status_code == 200
-    # user=None inside because decode_sse_ticket rejects it.
+    assert response.status_code == 401
 
 def test_wrong_ticket_type_rejected(test_user):
     expire = datetime.utcnow() + timedelta(seconds=30)
@@ -106,15 +102,52 @@ def test_wrong_ticket_type_rejected(test_user):
     }
     ticket = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
     response = client.get(f"/api/query/stream?query=hello&ticket={ticket}")
-    assert response.status_code == 200
+    assert response.status_code == 401
 
 def test_old_token_param_rejected(test_user):
     # Pass access JWT as 'token' which was the old way
     token = create_access_token(test_user, "test@example.com")
     response = client.get(f"/api/query/stream?query=hello&token={token}")
-    assert response.status_code == 200
-    # Since we removed `token` argument from the handler, it just goes into kwargs or is ignored.
-    # user=None inside.
+    # Now it hits "Missing SSE ticket" because ticket is not provided
+    assert response.status_code == 401
+
+def test_missing_sub_in_ticket_rejected():
+    expire = datetime.utcnow() + timedelta(seconds=30)
+    payload = {
+        "type": "sse",
+        "exp": expire,
+        "jti": str(uuid.uuid4()),
+        "iat": datetime.utcnow(),
+    }
+    ticket = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    response = client.get(f"/api/query/stream?query=hello&ticket={ticket}")
+    assert response.status_code == 401
+
+def test_malformed_sub_in_ticket_rejected():
+    expire = datetime.utcnow() + timedelta(seconds=30)
+    payload = {
+        "sub": "not-an-integer",
+        "type": "sse",
+        "exp": expire,
+        "jti": str(uuid.uuid4()),
+        "iat": datetime.utcnow(),
+    }
+    ticket = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    response = client.get(f"/api/query/stream?query=hello&ticket={ticket}")
+    assert response.status_code == 401
+
+def test_nonexistent_user_in_ticket_rejected():
+    expire = datetime.utcnow() + timedelta(seconds=30)
+    payload = {
+        "sub": "999999",
+        "type": "sse",
+        "exp": expire,
+        "jti": str(uuid.uuid4()),
+        "iat": datetime.utcnow(),
+    }
+    ticket = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    response = client.get(f"/api/query/stream?query=hello&ticket={ticket}")
+    assert response.status_code == 401
 
 def test_valid_sse_ticket_accepted(test_user):
     ticket = create_sse_ticket(test_user)
