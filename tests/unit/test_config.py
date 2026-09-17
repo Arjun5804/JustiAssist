@@ -21,7 +21,7 @@ def test_valid_development_env():
 
 def test_valid_production_env():
     """2. Test valid production (requires valid secret)."""
-    settings = Settings(_env_file=None, APP_ENV="production", JWT_SECRET_KEY="a" * 32)
+    settings = Settings(_env_file=None, APP_ENV="production", JWT_SECRET_KEY="a" * 32, DATABASE_URL="postgresql://user:pass@localhost/db")
     assert settings.APP_ENV == "production"
 
 def test_valid_testing_env():
@@ -79,7 +79,7 @@ def test_production_rejects_missing_default_weak_jwt_secret():
 def test_production_accepts_strong_secret():
     """10. Test production accepts a >=32-character secret."""
     valid_secret = "a" * 32
-    settings = Settings(_env_file=None, APP_ENV="production", JWT_SECRET_KEY=valid_secret)
+    settings = Settings(_env_file=None, APP_ENV="production", JWT_SECRET_KEY=valid_secret, DATABASE_URL="postgresql://user:pass@localhost/db")
     assert settings.JWT_SECRET_KEY.get_secret_value() == valid_secret
 
 def test_cors_parsing_still_works():

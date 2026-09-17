@@ -89,7 +89,7 @@ def test_upload_document_storage_failure(client, auth_headers, mock_storage):
     
     response = client.post("/upload-document", files=files, data=data, headers=auth_headers)
     assert response.status_code == 500
-    assert "S3 bucket down" in response.text
+    assert "An internal error occurred while processing your request." in response.text
     
     # Verify no DB records
     db = get_db_session()
@@ -109,7 +109,7 @@ def test_upload_document_db_failure(client, auth_headers, mock_storage):
         
         response = client.post("/upload-document", files=files, data=data, headers=auth_headers)
         assert response.status_code == 500
-        assert "DB connection lost" in response.text
+        assert "An internal error occurred while processing your request." in response.text
         
         # Verify rollback was attempted on storage
         mock_storage.delete.assert_called_once()
@@ -199,7 +199,7 @@ def test_clear_session_documents_storage_failure(client, test_user, auth_headers
     
     resp = client.delete(f"/session/{session_id}/documents", headers=auth_headers)
     assert resp.status_code == 500
-    assert "Storage deletion error" in resp.text
+    assert "An internal error occurred while processing your request." in resp.text
     
     # Verify DB metadata remains
     db = get_db_session()
