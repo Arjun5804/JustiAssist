@@ -12,6 +12,8 @@ from core.dependencies import deps
 from services.auth import get_current_user_optional, decode_token, decode_sse_ticket
 from services.database import get_db_session, User
 from services.chat_memory import save_message, format_history_for_context
+from core.rate_limit import RateLimiter
+from config import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,7 +25,7 @@ class QueryRequest(BaseModel):
     query: str = Field(..., min_length=3, max_length=1000)
     mode: Optional[str] = Field(default="auto", description="auto, legal, or bail")
     custody_days: Optional[int] = Field(default=None, ge=0)
-    offense_sections: Optional[List[str]] = Field(default=None)
+    offense_sections: Optional[List[str]] = Field(default=None, max_length=10)
     session_id: Optional[str] = Field(default=None, description="Session ID for uploaded documents")
     conversation_id: Optional[str] = Field(default=None, description="ID for persistent chat thread")
 
@@ -101,8 +103,8 @@ def _state_to_response(state: AgentState) -> QueryResponse:
         verification_verdicts=verifications
     )
 
-@router.post("/query", response_model=QueryResponse)
-@router.post("/api/v2/query", response_model=QueryResponse)
+@router.post("/query", response_model=QueryResponse, dependencies=[Depends(RateLimiter("LLM", settings.RATE_LIMIT_LLM))])
+@router.post("/api/v2/query", response_model=QueryResponse, dependencies=[Depends(RateLimiter("LLM", settings.RATE_LIMIT_LLM))])
 async def process_query_endpoint(
     request: QueryRequest,
     user = Depends(get_current_user_optional)
@@ -159,8 +161,8 @@ async def process_query_endpoint(
 
     return _state_to_response(state)
 
-@router.get("/api/query/stream")
-@router.get("/api/v2/query/stream")
+@router.get("/api/query/stream", dependencies=[Depends(RateLimiter("LLM", settings.RATE_LIMIT_LLM))])
+@router.get("/api/v2/query/stream", dependencies=[Depends(RateLimiter("LLM", settings.RATE_LIMIT_LLM))])
 async def query_stream_endpoint(
     query: str,
     mode: str = "auto",

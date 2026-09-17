@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
 from typing import Optional, List, Dict, Any
 from core.dependencies import deps
+from services.auth import get_current_user
 from metrics import metrics
 import httpx
 from config import OLLAMA_BASE_URL, VECTOR_STORE_PATH
@@ -66,7 +67,7 @@ async def get_metrics():
 
 
 @router.post("/build-indices")
-async def build_indices():
+async def build_indices(user = Depends(get_current_user)):
     """Trigger index building (admin endpoint)"""
 
     try:
@@ -78,7 +79,7 @@ async def build_indices():
 
 
 @router.get("/stats")
-async def get_statistics():
+async def get_statistics(user = Depends(get_current_user)):
     """Get system statistics"""
     if deps.vector_store is None:
         return {"error": "Vector store not initialized"}
@@ -87,7 +88,7 @@ async def get_statistics():
 
 
 @router.get("/api/news")
-async def get_legal_news(refresh: bool = False):
+async def get_legal_news(refresh: bool = False, user = Depends(get_current_user)):
     """
     Get legal news headlines.
     

@@ -5,12 +5,14 @@ from pydantic import BaseModel, Field
 from llm_provider import call_llm
 from datetime import datetime
 from prompts.templates import build_generation_prompt
+from core.rate_limit import RateLimiter
+from config import settings
 
 class CasePredictionRequest(BaseModel):
     """Request model for AI case outcome prediction"""
     case_type: str = Field(..., description="criminal, civil, constitutional, family, property")
-    sections_involved: List[str] = Field(default_factory=list)
-    case_facts: str = Field(..., min_length=20)
+    sections_involved: List[str] = Field(default_factory=list, max_length=10)
+    case_facts: str = Field(..., min_length=20, max_length=5000)
     court_level: str = Field(default="sessions", description="district, sessions, high_court, supreme_court")
     jurisdiction: str = Field(default="Delhi")
     prior_proceedings: Optional[str] = None
@@ -20,12 +22,12 @@ class CasePredictionRequest(BaseModel):
 
 class CounterArgumentRequest(BaseModel):
     """Request model for counter-argument generation"""
-    legal_argument: str = Field(..., min_length=20, description="The legal argument to counter")
+    legal_argument: str = Field(..., min_length=20, max_length=5000, description="The legal argument to counter")
     case_type: str = Field(default="criminal", description="criminal, civil, constitutional, family, property")
-    sections_involved: List[str] = Field(default_factory=list)
+    sections_involved: List[str] = Field(default_factory=list, max_length=10)
     client_role: str = Field(default="respondent", description="petitioner, respondent, accused, complainant")
     jurisdiction: str = Field(default="Delhi")
-    focus_areas: List[str] = Field(default_factory=list, description="procedural, substantive, evidentiary, constitutional")
+    focus_areas: List[str] = Field(default_factory=list, max_length=10, description="procedural, substantive, evidentiary, constitutional")
 
 
 
@@ -38,19 +40,19 @@ class QuizRequest(BaseModel):
 
 
 class MootCourtRequest(BaseModel):
-    case_scenario: str = Field(..., min_length=20)
+    case_scenario: str = Field(..., min_length=20, max_length=5000)
     user_role: str = Field(default="petitioner", description="petitioner or respondent")
-    user_argument: str = Field(..., min_length=10)
+    user_argument: str = Field(..., min_length=10, max_length=3000)
     court_level: str = Field(default="High Court")
     round_number: int = Field(default=1)
-    history: List[dict] = Field(default_factory=list, description="Previous argument exchanges")
+    history: List[dict] = Field(default_factory=list, max_length=20, description="Previous argument exchanges")
 
 
 
 
 router = APIRouter()
 
-@router.post("/api/predict/case")
+@router.post("/api/predict/case", dependencies=[Depends(RateLimiter("LLM", settings.RATE_LIMIT_LLM))])
 async def predict_case_outcome(request: CasePredictionRequest):
     """
     CasePredictAI — Predict case outcome with multiple strategic approaches.
@@ -266,7 +268,7 @@ def _get_demo_prediction(request: CasePredictionRequest) -> dict:
     }
 
 
-@router.post("/api/counter-arguments")
+@router.post("/api/counter-arguments", dependencies=[Depends(RateLimiter("LLM", settings.RATE_LIMIT_LLM))])
 async def generate_counter_arguments(request: CounterArgumentRequest):
     """
     Counter Argument Generator — develop opposing viewpoints, rebuttals,
@@ -476,7 +478,7 @@ def _get_demo_counter_arguments(req: CounterArgumentRequest) -> dict:
     }
 
 
-@router.post("/api/sandbox/quiz")
+@router.post("/api/sandbox/quiz", dependencies=[Depends(RateLimiter("LLM", settings.RATE_LIMIT_LLM))])
 async def generate_quiz(request: QuizRequest):
     """Generate entrance exam MCQs for legal preparation."""
     try:
@@ -528,7 +530,7 @@ class DocumentGenerationRequest(BaseModel):
     template_type: str
     form_data: Dict[str, Any]
 
-@router.post("/api/documents/generate")
+@router.post("/api/documents/generate", dependencies=[Depends(RateLimiter("LLM", settings.RATE_LIMIT_LLM))])
 async def generate_legal_document(request: DocumentGenerationRequest):
     """
     Generate a professional legal document draft using AI & statutory context.
@@ -582,7 +584,7 @@ def _get_demo_quiz(req: QuizRequest) -> dict:
     return {"questions": topic_questions[:req.num_questions]}
 
 
-@router.post("/api/sandbox/moot-court")
+@router.post("/api/sandbox/moot-court", dependencies=[Depends(RateLimiter("LLM", settings.RATE_LIMIT_LLM))])
 async def moot_court_exchange(request: MootCourtRequest):
     """Moot Court simulator — AI plays opposing counsel and judge."""
     try:

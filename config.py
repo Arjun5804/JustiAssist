@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     REDIS_URL: str = Field(default="redis://localhost:6379")
     REDIS_DEFAULT_TTL: int = 3600
     
+    # Rate Limiting
+    RATE_LIMIT_AUTH: str = "5/minute"
+    RATE_LIMIT_LLM: str = "10/minute"
+    RATE_LIMIT_SSE_TICKET: str = "15/minute"
+    RATE_LIMIT_UPLOAD: str = "20/minute"
+    RATE_LIMIT_STANDARD: str = "60/minute"
+    
     # LLM (Groq Primary)
     GROQ_API_KEY: SecretStr | None = None
     GROQ_MODEL: str = "llama-3.3-70b-versatile"

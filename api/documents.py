@@ -18,6 +18,8 @@ from services.auth import get_current_user
 from services.database import get_db_session, Document, User
 from core.storage import storage
 from services.cache import cache
+from core.rate_limit import RateLimiter
+from config import settings
 
 def extract_text_from_file(file_path: Path, filename: str) -> str:
     """Extract text from uploaded file"""
@@ -60,7 +62,7 @@ def extract_text_from_file(file_path: Path, filename: str) -> str:
 
 router = APIRouter()
 
-@router.post("/upload-document")
+@router.post("/upload-document", dependencies=[Depends(RateLimiter("UPLOAD", settings.RATE_LIMIT_UPLOAD))])
 async def upload_document(
     file: UploadFile = File(...),
     query: str = Form(...),

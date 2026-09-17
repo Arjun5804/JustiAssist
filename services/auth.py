@@ -47,6 +47,8 @@ class AuthResponse(BaseModel):
 
 # ==================== Core Functions ====================
 
+DUMMY_PASSWORD_HASH = "$2b$12$R73MvdJqXhZk21t/RTcyqeB4EJE52W4Dg.HMNKWlfO5YjFggn3K2S"
+
 def hash_password(plain_password: str) -> str:
     """Hash a password with bcrypt (direct, no passlib)"""
     pwd_bytes = plain_password.encode('utf-8')
@@ -168,7 +170,12 @@ async def login_handler(request: LoginRequest) -> AuthResponse:
     try:
         user = db.query(User).filter(User.email == request.email.lower()).first()
 
-        if not user or not verify_password(request.password, user.hashed_password):
+        if not user:
+            # Timing attack mitigation
+            verify_password(request.password, DUMMY_PASSWORD_HASH)
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+            
+        if not verify_password(request.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid email or password")
 
         if not user.is_active:
