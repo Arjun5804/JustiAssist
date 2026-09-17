@@ -6,7 +6,7 @@ This document represents the final production-readiness audit of JustiAssist v2.
 
 **Assessment:** `READY WITH DEPLOYMENT CONDITIONS`
 
-The codebase is exceptionally hardened and secure for a single-instance deployment. It successfully implements all Phase 10 guarantees including atomic rate limiting, SSE ticket issuance, ContextVar-based request correlation, JSON production logging, and robust failure isolation. 
+The codebase is hardened and secure for a single-instance deployment. It implements Phase 10 guarantees including atomic rate limiting, SSE ticket issuance, ContextVar-based request correlation, JSON production logging, and robust failure isolation. 
 
 However, because the `session_manager` (for document uploads) and `vector_store` (for FAISS indices) are completely in-memory and stateful, the application **cannot** be horizontally scaled without introducing session-affinity (sticky sessions) or moving to an external vector database.
 
@@ -25,7 +25,7 @@ However, because the `session_manager` (for document uploads) and `vector_store`
 
 ## 2. API Security & Abuse Controls
 
-* **Finding:** Atomic Lua script rate-limiting (`core/rate_limit.py`) is perfectly executed. The fail-open behavior degrades gracefully if Redis is unavailable.
+* **Finding:** Atomic Lua script rate-limiting (`core/rate_limit.py`) is implemented. The fail-open behavior degrades gracefully if Redis is unavailable.
 * **Finding:** Document uploads are strictly limited to 5MB and specific extensions (`api/documents.py`).
 * **Finding:** `X-Real-IP` is safely extracted for rate-limiting unauthenticated users.
 
@@ -87,6 +87,7 @@ However, because the `session_manager` (for document uploads) and `vector_store`
 
 * **Finding (P0 for horizontal scale, P2 for single-node):** The application relies on a global, in-memory `session_manager` dict. If a user uploads a document to Worker A, and their subsequent query hits Worker B, the document will not be found in memory.
 * **Finding (P2):** The entire FAISS index is loaded into RAM on startup. With multiple Gunicorn/Uvicorn workers, this RAM usage will multiply by the number of workers unless a shared memory structure or external DB (like pgvector) is used.
+* **Finding (P2):** Persistent Object Storage and PostgreSQL do not currently rehydrate the in-memory DocumentSession/session FAISS state after backend restart. Active uploaded-document sessions are therefore ephemeral across process restarts. This is a deployment/product limitation, separate from horizontal worker affinity.
 
 **Status:** SCALABILITY LIMITED
 
@@ -95,7 +96,7 @@ However, because the `session_manager` (for document uploads) and `vector_store`
 ## 9. Docker & Nginx
 
 * **Finding:** `docker-compose.yml` cleanly defines the environment, mapping volumes and setting up PostgreSQL, Redis, and Alembic migrations.
-* **Finding:** Nginx (`frontend/nginx.conf`) explicitly disables `proxy_buffering` for the `/stream` endpoints, guaranteeing that SSE events flow to the client in real-time.
+* **Finding:** Nginx (`frontend/nginx.conf`) explicitly disables `proxy_buffering` for the `/stream` endpoints, ensuring that SSE events flow to the client in real-time.
 * **Finding:** `config.py` enforces that SQLite cannot be used if `APP_ENV=production`.
 * **Finding:** `config.py` enforces that `JWT_SECRET_KEY` must be changed and >= 32 characters in production.
 
