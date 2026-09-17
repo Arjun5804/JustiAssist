@@ -139,6 +139,7 @@ async def upload_document(
         db.close()
         
     # Process document (download to temporary working file as required by Phase 7D)
+    # Guaranteed cleanup via try/finally block to prevent /tmp exhaustion DoS
     with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
         tmp_path = Path(tmp.name)
     
