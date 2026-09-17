@@ -9,9 +9,12 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from core.dependencies import deps
-from services.auth import get_current_user_optional, decode_token
+from services.auth import get_current_user_optional, decode_token, decode_sse_ticket
 from services.database import get_db_session, User
 from services.chat_memory import save_message, format_history_for_context
+import logging
+
+logger = logging.getLogger(__name__)
 
 from agents.state import AgentState
 
@@ -165,7 +168,7 @@ async def query_stream_endpoint(
     conversation_id: str = None,
     custody_days: int = None,
     offense_sections: List[str] = None,
-    token: str = None,
+    ticket: str = None,
     header_user = Depends(get_current_user_optional)
 ):
     """
@@ -173,12 +176,8 @@ async def query_stream_endpoint(
     Emits events while routing through the same AgentOrchestrator.
     """
     user = header_user
-    if not user and token:
-        payload = decode_token(token)
-        if payload:
-            db = get_db_session()
-            user = db.query(User).filter(User.id == int(payload["sub"])).first()
-            db.close()
+    if not user and ticket:
+        user = decode_sse_ticket(ticket)
             
     async def event_generator():
         try:
@@ -190,7 +189,8 @@ async def query_stream_endpoint(
                 try:
                     await save_message(user_id=user.id, role="user", content=query, conversation_id=conv_id, session_id=session_id)
                 except ConversationOwnershipError as e:
-                    yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+                    logger.error(f"Conversation ownership error in SSE: {e}", exc_info=True)
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'An internal error occurred while processing your request.'})}\n\n"
                     return
                 
             state = AgentState(
@@ -221,7 +221,8 @@ async def query_stream_endpoint(
                     res_state = await deps.agent_orchestrator.run(state, on_stage=sync_emit)
                     queue.put_nowait({"type": "complete", "state": res_state})
                 except Exception as e:
-                    queue.put_nowait({"type": "error", "message": str(e)})
+                    logger.error(f"Error in orchestrator during SSE: {e}", exc_info=True)
+                    queue.put_nowait({"type": "error", "message": "An internal error occurred while processing your request."})
 
             task = asyncio.create_task(run_orchestrator())
             
@@ -242,13 +243,17 @@ async def query_stream_endpoint(
                     yield f"data: {json.dumps({'type': 'complete', 'data': {'response': resp}})}\n\n"
                     break
                 elif msg["type"] == "error":
-                    yield f"data: {json.dumps({'type': 'error', 'message': msg['message']})}\n\n"
+                    # Generic message already formatted or we can format it here.
+                    # Since queue.put_nowait adds it, we should sanitize it. Wait, the inner error was added to queue.
+                    # Let's sanitize everything just in case.
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'An internal error occurred while processing your request.'})}\n\n"
                     break
                 else:
                     yield f"data: {json.dumps(msg)}\n\n"
                     
         except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            logger.error(f"Unhandled SSE stream exception: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'message': 'An internal error occurred while processing your request.'})}\n\n"
             
     return StreamingResponse(
         event_generator(),

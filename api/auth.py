@@ -24,3 +24,11 @@ async def auth_me(user = Depends(get_current_user)):
     return {"user": user.to_dict()}
 
 
+@router.post("/api/auth/sse-ticket")
+async def auth_sse_ticket(user = Depends(get_current_user)):
+    """Generate a short-lived ticket for SSE stream authentication"""
+    from services.auth import create_sse_ticket
+    ticket = create_sse_ticket(user.id)
+    return {"ticket": ticket}
+
+

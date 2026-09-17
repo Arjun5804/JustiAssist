@@ -162,6 +162,9 @@ static_path = Path(__file__).parent / "static"
 if static_path.exists():
     app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
+from core.errors import add_exception_handlers
+add_exception_handlers(app)
+
 
 # ==================== Request/Response Models ====================
 # Models and helper functions preserved for legacy compatibility

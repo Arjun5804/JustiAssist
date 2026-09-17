@@ -79,40 +79,64 @@ export const connectSSE = (query, options = {}, callbacks = {}) => {
     if (custodyDays) params.append('custody_days', custodyDays);
     if (offenseSections) params.append('offense_sections', offenseSections);
 
-    // Use v2 endpoint if available, with token in query string
-    const token = getToken();
-    if (token) params.append('token', token);
+    let isClosed = false;
+    let eventSource = null;
 
-    const eventSource = new EventSource(`/api/v2/query/stream?${params.toString()}`);
-
-    eventSource.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            if (onMessage) onMessage(data);
-
-            if (data.type === 'stage') {
-                if (onStage) onStage(data.stage, data.status, data.data);
-            } else if (data.type === 'complete') {
-                if (onComplete) onComplete(data.data.response || data.response);
-                eventSource.close();
-            } else if (data.type === 'error') {
-                if (onError) onError(data.message);
+    const proxy = {
+        close: () => {
+            isClosed = true;
+            if (eventSource) {
                 eventSource.close();
             }
-        } catch (err) {
-            console.error('Error parsing SSE message:', err);
-            if (onError) onError('Error parsing response from server');
-            eventSource.close();
         }
     };
 
-    eventSource.onerror = (err) => {
-        console.error('EventSource failed:', err);
-        if (onError) onError('Connection to server lost. Please try again.');
-        eventSource.close();
+    const fetchTicketAndConnect = async () => {
+        try {
+            const ticketRes = await authFetch('/api/auth/sse-ticket', { method: 'POST' });
+            if (ticketRes.ok) {
+                const { ticket } = await ticketRes.json();
+                params.append('ticket', ticket);
+            }
+        } catch (err) {
+            console.error('Error fetching SSE ticket:', err);
+        }
+
+        if (isClosed) return;
+
+        eventSource = new EventSource(`/api/v2/query/stream?${params.toString()}`);
+
+        eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (onMessage) onMessage(data);
+
+                if (data.type === 'stage') {
+                    if (onStage) onStage(data.stage, data.status, data.data);
+                } else if (data.type === 'complete') {
+                    if (onComplete) onComplete(data.data.response || data.response);
+                    proxy.close();
+                } else if (data.type === 'error') {
+                    if (onError) onError(data.message);
+                    proxy.close();
+                }
+            } catch (err) {
+                console.error('Error parsing SSE message:', err);
+                if (onError) onError('Error parsing response from server');
+                proxy.close();
+            }
+        };
+
+        eventSource.onerror = (err) => {
+            console.error('EventSource failed:', err);
+            if (onError) onError('Connection to server lost. Please try again.');
+            proxy.close();
+        };
     };
 
-    return eventSource;
+    fetchTicketAndConnect();
+
+    return proxy;
 };
 
 // ==================== Chat Memory API ====================

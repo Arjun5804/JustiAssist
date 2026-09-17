@@ -81,7 +81,40 @@ def decode_token(token: str) -> Optional[dict]:
     """Decode and validate a JWT token"""
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        # Reject SSE tickets in normal token decode
+        if payload.get("type") == "sse":
+            return None
         return payload
+    except JWTError:
+        return None
+
+def create_sse_ticket(user_id: int) -> str:
+    """Create a short-lived JWT ticket specifically for SSE."""
+    import uuid
+    expire = datetime.utcnow() + timedelta(seconds=30)
+    payload = {
+        "sub": str(user_id),
+        "type": "sse",
+        "exp": expire,
+        "jti": str(uuid.uuid4()),
+        "iat": datetime.utcnow(),
+    }
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+def decode_sse_ticket(ticket: str) -> Optional[User]:
+    """Decode and validate an SSE ticket."""
+    if not ticket:
+        return None
+    try:
+        payload = jwt.decode(ticket, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != "sse":
+            return None
+        db = get_db_session()
+        try:
+            user = db.query(User).filter(User.id == int(payload["sub"])).first()
+            return user
+        finally:
+            db.close()
     except JWTError:
         return None
 

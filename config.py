@@ -76,6 +76,10 @@ class Settings(BaseSettings):
                 raise ValueError("JWT_SECRET_KEY must be set to a secure value in production.")
             if len(val) < 32:
                 raise ValueError("JWT_SECRET_KEY must be at least 32 characters long in production.")
+            
+            if self.DATABASE_URL.startswith("sqlite"):
+                raise ValueError("PostgreSQL is required in production. DATABASE_URL cannot use sqlite.")
+                
         return self
 
 
