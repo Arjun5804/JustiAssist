@@ -5,6 +5,7 @@ Structured logging for production observability
 
 import json
 import logging
+import hashlib
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, asdict, field
@@ -17,8 +18,8 @@ class RetrievalEvent:
     event_type: str = "retrieval"
     query_id: str = ""
     timestamp: str = ""
-    query_text: str = ""
-    reformulated_query: str = ""
+    query_hash: str = ""
+    reformulated_query_hash: str = ""
     search_type: str = ""  # "hybrid" or "semantic"
     num_results: int = 0
     top_5_sections: List[str] = field(default_factory=list)
@@ -76,12 +77,16 @@ class AuditLogger:
         confidence_level: str,
         search_type: str = "hybrid"
     ):
-        """Log retrieval event"""
+        """Log retrieval event securely hashing PII"""
+        
+        q_hash = hashlib.sha256(query_text.encode('utf-8')).hexdigest() if query_text else ""
+        r_hash = hashlib.sha256(reformulated_query.encode('utf-8')).hexdigest() if reformulated_query else ""
+        
         event = RetrievalEvent(
             query_id=query_id,
             timestamp=datetime.utcnow().isoformat(),
-            query_text=query_text[:200],
-            reformulated_query=reformulated_query[:200],
+            query_hash=q_hash,
+            reformulated_query_hash=r_hash,
             search_type=search_type,
             num_results=len(results),
             top_5_sections=[getattr(r, 'section_number', '') for r in results[:5]],

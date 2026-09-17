@@ -19,6 +19,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from agents.state import AgentState
+from metrics import metrics
 
 # ==================== Models ====================
 class QueryRequest(BaseModel):
@@ -232,6 +233,7 @@ async def query_stream_endpoint(
 
             task = asyncio.create_task(run_orchestrator())
             
+            metrics.incr("sse_active_connections")
             try:
                 while True:
                     msg = await queue.get()
@@ -247,17 +249,20 @@ async def query_stream_endpoint(
                                 session_id=session_id
                             )
                         resp = _state_to_response(final_state).model_dump()
+                        metrics.incr("sse_completed_total")
                         yield f"data: {json.dumps({'type': 'complete', 'data': {'response': resp}})}\n\n"
                         break
                     elif msg["type"] == "error":
                         # Generic message already formatted or we can format it here.
                         # Since queue.put_nowait adds it, we should sanitize it. Wait, the inner error was added to queue.
                         # Let's sanitize everything just in case.
+                        metrics.incr("sse_errors_total")
                         yield f"data: {json.dumps({'type': 'error', 'message': 'An internal error occurred while processing your request.'})}\n\n"
                         break
                     else:
                         yield f"data: {json.dumps(msg)}\n\n"
             finally:
+                metrics.decr("sse_active_connections")
                 if not task.done():
                     task.cancel()
                 try:
@@ -272,6 +277,7 @@ async def query_stream_endpoint(
             raise
         except Exception as e:
             logger.error(f"Unhandled SSE stream exception: {e}", exc_info=True)
+            metrics.incr("sse_errors_total")
             yield f"data: {json.dumps({'type': 'error', 'message': 'An internal error occurred while processing your request.'})}\n\n"
             
     return StreamingResponse(

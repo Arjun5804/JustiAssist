@@ -4,6 +4,7 @@ from unittest.mock import patch, MagicMock
 
 from app import app
 from services.auth import create_access_token, get_current_user
+from api.admin import get_admin_user
 from services.database import User
 
 client = TestClient(app)
@@ -18,14 +19,14 @@ def test_admin_endpoints_protected():
 
 @patch("api.admin.deps.vector_store")
 def test_admin_endpoints_authenticated(mock_vs):
-    # Should bypass 401
-    app.dependency_overrides[get_current_user] = lambda: User(id=1, email="admin@example.com", display_name="Admin")
+    # Should bypass 401 and 403
+    app.dependency_overrides[get_admin_user] = lambda: User(id=1, email="admin@example.com", display_name="Admin")
     mock_vs.get_statistics.return_value = {"stats": "ok"}
     try:
         res = client.get("/stats")
         assert res.status_code == 200
     finally:
-        app.dependency_overrides.pop(get_current_user, None)
+        app.dependency_overrides.pop(get_admin_user, None)
 
 # B. Input Bounds
 def test_input_bounds_text():

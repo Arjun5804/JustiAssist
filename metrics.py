@@ -22,6 +22,11 @@ class MetricsCollector:
         """Increment counter"""
         with self._lock:
             self._counters[metric] += value
+            
+    def decr(self, metric: str, value: int = 1):
+        """Decrement counter (used for gauges like active connections)"""
+        with self._lock:
+            self._counters[metric] -= value
     
     def observe(self, metric: str, value: float):
         """Record histogram observation"""
@@ -46,10 +51,24 @@ class MetricsCollector:
                 "retrieval_hit_rate": self._safe_rate("retrieval_hits", total_queries),
                 "retrieval_avg_score": self._safe_avg("retrieval_scores"),
                 "hybrid_search_count": self._counters.get("hybrid_searches", 0),
+                "statutory_results_total": self._counters.get("statutory_results_total", 0),
+                "case_law_results_total": self._counters.get("case_law_results_total", 0),
+                "external_results_total": self._counters.get("external_results_total", 0),
+                "session_document_results_total": self._counters.get("session_document_results_total", 0),
+                
+                # Verification & Generation metrics
+                "verifications_supported": self._counters.get("verifications_supported", 0),
+                "verifications_rejected": self._counters.get("verifications_rejected", 0),
+                "answers_abstained": self._counters.get("answers_abstained", 0),
                 
                 # Response metrics
                 "grounded_response_rate": self._safe_rate("responses_grounded", total_queries),
                 "fallback_rate": self._safe_rate("responses_fallback", total_queries),
+                
+                # SSE metrics
+                "sse_active_connections": self._counters.get("sse_active_connections", 0),
+                "sse_completed_total": self._counters.get("sse_completed_total", 0),
+                "sse_errors_total": self._counters.get("sse_errors_total", 0),
                 
                 # Citation metrics
                 "citation_validity_rate": self._safe_avg("citation_validity"),

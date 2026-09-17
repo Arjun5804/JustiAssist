@@ -7,6 +7,7 @@ from agents.research_agent import ResearchAgent
 from agents.analysis_agent import AnalysisAgent
 from agents.response_agent import ResponseAgent
 from agents.verification_agent import VerificationAgent
+from metrics import metrics
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,12 @@ class AgentOrchestrator:
             total_results = 0
             if state.validated_evidence:
                 total_results = len(state.validated_evidence.statutory_results) + len(state.validated_evidence.case_law_results)
+                
+                # Phase 10E RAG metrics
+                metrics.incr("statutory_results_total", len(state.validated_evidence.statutory_results))
+                metrics.incr("case_law_results_total", len(state.validated_evidence.case_law_results))
+                metrics.incr("external_results_total", len(state.validated_evidence.external_results))
+                metrics.incr("session_document_results_total", len(state.validated_evidence.session_documents))
             
             emit("retrieve", "complete", {"results": total_results})
             emit("rerank", "active")
@@ -87,6 +94,17 @@ class AgentOrchestrator:
             result = await self.verification_agent.run(state)
             if not result.success:
                 raise Exception(result.error)
+                
+            # Phase 10E Verification metrics
+            if state.generated_response:
+                for v in state.generated_response.verifications:
+                    if v.verdict.value == "SUPPORTED":
+                        metrics.incr("verifications_supported")
+                    else:
+                        metrics.incr("verifications_rejected")
+                        
+            if state.is_abstention:
+                metrics.incr("answers_abstained")
                 
             emit("quality_review", "complete")
             

@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     RATE_LIMIT_UPLOAD: str = "20/minute"
     RATE_LIMIT_STANDARD: str = "60/minute"
     
+    # Admin Authorization
+    ADMIN_EMAILS: str = ""
+    
     # LLM (Groq Primary)
     GROQ_API_KEY: SecretStr | None = None
     GROQ_MODEL: str = "llama-3.3-70b-versatile"

@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from app import app
 from services.auth import get_current_user
 from services.database import User
+from api.admin import get_admin_user
 
 @pytest.fixture
 def client(mock_lifespan_dependencies):
@@ -16,7 +17,7 @@ def test_health_endpoint(client):
     assert data["status"] == "healthy"
 
 def test_stats_endpoint(client):
-    app.dependency_overrides[get_current_user] = lambda: User(id=1, email="test@example.com", display_name="Test")
+    app.dependency_overrides[get_admin_user] = lambda: User(id=1, email="test@example.com", display_name="Test")
     try:
         response = client.get("/stats")
         assert response.status_code == 200
@@ -26,7 +27,7 @@ def test_stats_endpoint(client):
         assert "case_law" in data
         assert "embedding_model" in data
     finally:
-        app.dependency_overrides.pop(get_current_user, None)
+        app.dependency_overrides.pop(get_admin_user, None)
     
 def test_import_success():
     """Verify that importing the app does not crash."""

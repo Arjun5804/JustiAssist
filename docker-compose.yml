@@ -69,7 +69,7 @@ services:
         condition: service_completed_successfully
       # We don't depend on redis for correctness
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/readiness')"]
       interval: 10s
       timeout: 5s
       retries: 3

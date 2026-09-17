@@ -71,6 +71,8 @@ from retrieval.models import SearchResult as RerankSearchResult
 
 # Logging setup
 import logging
+from core.logger import setup_logging, RequestCorrelationMiddleware
+
 logger = logging.getLogger(__name__)
 
 # Global instances via deps container
@@ -81,11 +83,12 @@ from services.cache import cache
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize resources on startup"""
+    setup_logging(settings.APP_ENV)
     
-    print("="*60)
-    print("JUSTIASSIST v2.0 - Starting up...")
-    print("Powered by Native Agents | Firecrawl | Zero-Hallucination Engine")
-    print("="*60)
+    logger.info("="*60)
+    logger.info("JUSTIASSIST v2.0 - Starting up...")
+    logger.info("Powered by Native Agents | Firecrawl | Zero-Hallucination Engine")
+    logger.info("="*60)
     
     # Initialize cache
     await cache.init()
@@ -101,18 +104,18 @@ async def lifespan(app: FastAPI):
     deps.reranker = LegalReranker(mode='balanced')
     
     # RetrievalPipeline will be initialized after VectorStore is loaded
-    print("Enhanced RAG: reranker initialized")
+    logger.info("Enhanced RAG: reranker initialized")
     
     # Load vector store
     deps.vector_store = VectorStore()
     if VECTOR_STORE_PATH.exists():
         loaded = deps.vector_store.load()
         if loaded:
-            print("Vector indices loaded successfully")
+            logger.info("Vector indices loaded successfully")
         else:
-            print("Warning: Could not load vector indices. Run build_indices() first.")
+            logger.warning("Could not load vector indices. Run build_indices() first.")
     else:
-        print("Warning: Vector store path not found. Run build_indices() first.")
+        logger.warning("Vector store path not found. Run build_indices() first.")
     
     # Initialize RetrievalPipeline with loaded VectorStore
     from retrieval.pipeline import RetrievalPipeline
@@ -126,17 +129,17 @@ async def lifespan(app: FastAPI):
         vector_store=deps.vector_store,
         reranker=deps.reranker
     )
-    print("Agent Orchestrator initialized with 5 native agents")
+    logger.info("Agent Orchestrator initialized with 5 native agents")
     
     # SQLite database will be assumed to be initialized externally via alembic or tests
     
-    print("\nJustiAssist v2.0 ready!")
-    print("="*60)
+    logger.info("JustiAssist v2.0 ready!")
+    logger.info("="*60)
     
     yield
     
     # Cleanup
-    print("Shutting down JustiAssist...")
+    logger.info("Shutting down JustiAssist...")
     await cache.close()
 
 app = FastAPI(
@@ -149,6 +152,7 @@ app = FastAPI(
 # CORS middleware
 allowed_origins = settings.ALLOWED_ORIGINS.split(",")
 
+app.add_middleware(RequestCorrelationMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
