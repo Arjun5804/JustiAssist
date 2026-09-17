@@ -1,11 +1,12 @@
-import time
+
+import math
 import logging
 from typing import Optional, Tuple
 from fastapi import Request, HTTPException, Depends
 
 from services.cache import cache
 from services.auth import get_current_user_optional, User
-from config import settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -21,35 +22,37 @@ local window = tonumber(ARGV[2])
 
 local current = tonumber(redis.call("GET", key) or "0")
 if current >= limit then
-    local ttl = redis.call("PTTL", key)
-    return {current, ttl}
+    return {current + 1, redis.call("PTTL", key)}
 end
 
 current = tonumber(redis.call("INCR", key))
 if current == 1 then
     redis.call("EXPIRE", key, window)
 end
-local ttl = redis.call("PTTL", key)
-return {current, ttl}
+return {current, redis.call("PTTL", key)}
 """
 
 def parse_rate_limit(limit_str: str) -> Tuple[int, int]:
     """Parse a limit string like '5/minute' into (limit, window_seconds)."""
-    try:
-        parts = limit_str.split('/')
-        limit = int(parts[0])
-        window_str = parts[1].lower()
-        if window_str in ('second', 's'):
-            window = 1
-        elif window_str in ('minute', 'm'):
-            window = 60
-        elif window_str in ('hour', 'h'):
-            window = 3600
-        else:
-            window = 60
-        return limit, window
-    except Exception:
-        return 60, 60
+    parts = limit_str.split('/')
+    if len(parts) != 2:
+        raise ValueError(f"Invalid rate limit format: {limit_str}")
+        
+    limit = int(parts[0])
+    if limit <= 0:
+        raise ValueError(f"Rate limit must be a positive integer, got: {limit}")
+        
+    window_str = parts[1].lower().strip()
+    if window_str in ('second', 's'):
+        window = 1
+    elif window_str in ('minute', 'm'):
+        window = 60
+    elif window_str in ('hour', 'h'):
+        window = 3600
+    else:
+        raise ValueError(f"Unknown rate limit window unit: {window_str}")
+        
+    return limit, window
 
 class RateLimitService:
     def __init__(self):
@@ -80,10 +83,23 @@ class RateLimitService:
             if not sha:
                 return True, limit, 0
                 
-            res = await cache.redis.evalsha(sha, 1, key, limit, window)
+            try:
+                res = await cache.redis.evalsha(sha, 1, key, limit, window)
+            except Exception as e:
+                if "NOSCRIPT" in str(e):
+                    # Reload and retry once
+                    self._script_sha = None
+                    sha = await self._load_script()
+                    if not sha:
+                        return True, limit, 0
+                    res = await cache.redis.evalsha(sha, 1, key, limit, window)
+                else:
+                    raise e
+                    
             current, ttl_ms = res
             
-            ttl_seconds = max(0, int(ttl_ms / 1000)) if ttl_ms > 0 else window
+            # Use math.ceil to ensure we don't round down to 0 seconds while actively blocked
+            ttl_seconds = max(1, math.ceil(ttl_ms / 1000.0)) if ttl_ms > 0 else window
             remaining = max(0, limit - current)
             
             if current > limit:

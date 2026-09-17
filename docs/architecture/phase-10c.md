@@ -7,8 +7,8 @@ Phase 10C focuses on hardening JustiAssist's API endpoints against abuse, boundi
 
 ### 1. Centralized Rate Limiting
 - **Location:** `core/rate_limit.py`
-- **Mechanism:** Redis Lua script for atomic `INCR` + `EXPIRE`. Fail-open behavior if Redis is unavailable.
-- **Dependency:** `RateLimiter` class implemented as a FastAPI dependency.
+- **Mechanism:** Redis Lua script for atomic `INCR` + `EXPIRE`. The threshold correctly ensures the exact Nth request is allowed and the (N+1)th request is rejected. Redis `NOSCRIPT` cache loss is dynamically caught and retried, and fail-open behavior is preserved if Redis is unavailable. `Retry-After` header accurately rounds up TTL to ensure it is never zero while actively blocked.
+- **Dependency:** `RateLimiter` class implemented as a FastAPI dependency, with strict configuration parsing.
 - **Identity Extraction:** Authenticated `user.id` or fallback to `X-Real-IP` (Nginx) / client host.
 - **Categories:**
   - `AUTH`: 5/minute (Signup, Login)
