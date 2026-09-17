@@ -42,8 +42,8 @@ def extract_text_from_file(file_path: Path, filename: str) -> str:
             content = f"[Error extracting PDF: {str(e)}]"
     elif filename.endswith('.docx'):
         try:
-            from docx import Document
-            doc = Document(str(file_path))
+            from docx import Document as DocxDocument  # type: ignore
+            doc = DocxDocument(str(file_path))
             paragraphs = [para.text for para in doc.paragraphs if para.text.strip()]
             content = "\n".join(paragraphs)
         except ImportError:
