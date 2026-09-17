@@ -23,10 +23,13 @@ class MetricsCollector:
         with self._lock:
             self._counters[metric] += value
             
-    def decr(self, metric: str, value: int = 1):
+    def decr(self, metric: str, value: int = 1, ensure_non_negative: bool = False):
         """Decrement counter (used for gauges like active connections)"""
         with self._lock:
-            self._counters[metric] -= value
+            if ensure_non_negative:
+                self._counters[metric] = max(0, self._counters[metric] - value)
+            else:
+                self._counters[metric] -= value
     
     def observe(self, metric: str, value: float):
         """Record histogram observation"""

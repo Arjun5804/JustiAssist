@@ -33,6 +33,17 @@ def test_request_correlation_middleware():
     # Ensure ContextVar is reset (we can only observe this indirectly in test, or check outside request context)
     assert correlation_id_var.get() == ""
 
+@pytest.mark.asyncio
+async def test_concurrent_request_correlation():
+    """Ensure ContextVar isolation in concurrent requests."""
+    from httpx import AsyncClient, ASGITransport
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        tasks = [ac.get("/health/liveness") for _ in range(20)]
+        results = await asyncio.gather(*tasks)
+        
+        req_ids = [res.headers["X-Request-ID"] for res in results]
+        assert len(set(req_ids)) == 20  # All unique
+
 
 def test_audit_logger_pii_removal():
     """Test that raw query texts are not serialized in audit logs."""
@@ -69,21 +80,31 @@ def test_health_endpoints(mock_deps, mock_db_connect):
     # Readiness dependencies mocked
     mock_db_connect.return_value.__enter__.return_value.execute.return_value = True
     mock_deps.vector_store.statutory_index = object()
+    mock_deps.vector_store.case_law_index = object()
     
     # 1. Everything ready
     ready_res = client.get("/health/readiness")
     assert ready_res.status_code == 200
     assert ready_res.json()["status"] == "ready"
     
-    # 2. VectorStore missing
+    # 2. VectorStore missing statutory
     mock_deps.vector_store.statutory_index = None
+    mock_deps.vector_store.case_law_index = object()
     not_ready_res1 = client.get("/health/readiness")
     assert not_ready_res1.status_code == 503
     assert not_ready_res1.json()["status"] == "not_ready"
     assert not_ready_res1.json()["vector_store"] == "not_ready"
-    
-    # 3. Database missing
+
+    # 3. VectorStore missing case law
     mock_deps.vector_store.statutory_index = object()
+    mock_deps.vector_store.case_law_index = None
+    not_ready_res_cl = client.get("/health/readiness")
+    assert not_ready_res_cl.status_code == 503
+    assert not_ready_res_cl.json()["vector_store"] == "not_ready"
+    
+    # 4. Database missing
+    mock_deps.vector_store.statutory_index = object()
+    mock_deps.vector_store.case_law_index = object()
     mock_db_connect.side_effect = Exception("DB Connection Refused")
     not_ready_res2 = client.get("/health/readiness")
     assert not_ready_res2.status_code == 503
@@ -98,6 +119,11 @@ def test_admin_authorization():
     # Reset config for test
     original_emails = settings.ADMIN_EMAILS
     
+    # 1. Unauthenticated (fail closed)
+    app.dependency_overrides = {}
+    res_unauth = client.get("/metrics")
+    assert res_unauth.status_code == 401
+
     # Mock user dependency
     async def mock_get_current_user_no_admin():
         user = MagicMock()
@@ -106,7 +132,7 @@ def test_admin_authorization():
         
     app.dependency_overrides[get_current_user] = mock_get_current_user_no_admin
     
-    # 1. No admin configured (fail closed)
+    # 2. No admin configured (fail closed)
     settings.ADMIN_EMAILS = ""
     res_no_admin = client.get("/metrics")
     assert res_no_admin.status_code == 403
@@ -142,9 +168,24 @@ def test_metrics_aggregation():
     
     snapshot = metrics.get_metrics()
     assert snapshot["sse_active_connections"] == 1
+
+    # Ensure non-negative bounds
+    metrics.decr("sse_active_connections", ensure_non_negative=True)
+    metrics.decr("sse_active_connections", ensure_non_negative=True)
+    snapshot = metrics.get_metrics()
+    assert snapshot["sse_active_connections"] == 0
     
     # RAG tracking
     metrics.incr("statutory_results_total", 5)
     snapshot2 = metrics.get_metrics()
     assert snapshot2["statutory_results_total"] == 5
+
+    # Verification tracking
+    metrics.incr("verifications_supported")
+    metrics.incr("verifications_rejected")
+    metrics.incr("answers_abstained")
+    snapshot3 = metrics.get_metrics()
+    assert snapshot3["verifications_supported"] == 1
+    assert snapshot3["verifications_rejected"] == 1
+    assert snapshot3["answers_abstained"] == 1
 

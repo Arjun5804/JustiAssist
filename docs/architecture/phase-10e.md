@@ -38,7 +38,7 @@
 ```
 
 ## Request ID Behavior
-- `X-Request-ID` is assigned via the `RequestCorrelationMiddleware`. 
+- `X-Request-ID` is assigned via the pure ASGI `RequestCorrelationMiddleware`. 
 - An incoming `X-Request-ID` header is conservatively validated (alphanumeric, <64 chars) and preserved. Otherwise, a UUID4 is generated.
 - The ID is stored in a Python `contextvar` (`correlation_id_var`) and exposed to the standard logging module.
 - `finally` ensures the `ContextVar` is reset so it cannot leak across asynchronous tasks.
@@ -54,7 +54,7 @@
 
 ## Readiness Dependencies
 - **PostgreSQL:** REQUIRED for `/health/readiness`
-- **VectorStore:** REQUIRED for `/health/readiness`
+- **VectorStore:** REQUIRED for `/health/readiness` (both statutory and case_law indices must be loaded)
 - **Redis:** OPTIONAL. Reported but does not cause readiness failure.
 - **External Providers (Groq/Ollama, Firecrawl, Kanoon, GNews):** OPTIONAL. Not checked during readiness to prevent cascading failures if third-party endpoints go down.
 
@@ -68,7 +68,7 @@
 - `answers_abstained`: Number of final responses where the entire Agent State is marked as abstained.
 
 ## SSE Metrics
-- `sse_active_connections`: Concurrent gauge incremented when an SSE starts, and decremented safely inside a `finally` block when the stream finishes (normal completion, error, or client disconnect).
+- `sse_active_connections`: Concurrent gauge incremented when an SSE starts, and decremented safely inside a `finally` block when the stream finishes (normal completion, error, or client disconnect). Decrement is bounded to 0 to prevent negative active connection counts.
 - `sse_completed_total`: Monotonic counter of completed streams.
 - `sse_errors_total`: Monotonic counter of stream errors/exceptions.
 

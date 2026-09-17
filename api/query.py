@@ -262,7 +262,7 @@ async def query_stream_endpoint(
                     else:
                         yield f"data: {json.dumps(msg)}\n\n"
             finally:
-                metrics.decr("sse_active_connections")
+                metrics.decr("sse_active_connections", ensure_non_negative=True)
                 if not task.done():
                     task.cancel()
                 try:

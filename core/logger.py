@@ -3,30 +3,50 @@ import logging
 import uuid
 from datetime import datetime
 from contextvars import ContextVar
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
 
 # Context variable to hold the current request ID
 correlation_id_var: ContextVar[str] = ContextVar("correlation_id", default="")
 
-class RequestCorrelationMiddleware(BaseHTTPMiddleware):
+class RequestCorrelationMiddleware:
     """
-    Middleware to ensure every request has a unique request ID.
+    Pure ASGI Middleware to ensure every request has a unique request ID.
     Reads X-Request-ID if present and safe, otherwise generates a UUID4.
     Exposes the ID in the X-Request-ID response header and to logs via ContextVar.
     """
-    async def dispatch(self, request: Request, call_next):
-        req_id = request.headers.get("X-Request-ID", "")
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+
+        # Extract headers (which are list of byte tuples)
+        headers = scope.get("headers", [])
+        req_id = ""
+        for k, v in headers:
+            if k.lower() == b"x-request-id":
+                req_id = v.decode("latin-1")
+                break
+
         # Conservatively validate incoming request IDs (alphanumeric and dashes, max 64 chars)
         if not req_id or len(req_id) > 64 or not req_id.replace("-", "").isalnum():
             req_id = str(uuid.uuid4())
             
         token = correlation_id_var.set(req_id)
+
+        async def send_with_request_id(message):
+            if message["type"] == "http.response.start":
+                # Add X-Request-ID to response headers
+                headers = list(message.get("headers", []))
+                # Check if it already exists to avoid duplicates
+                if not any(k.lower() == b"x-request-id" for k, v in headers):
+                    headers.append((b"x-request-id", req_id.encode("latin-1")))
+                message["headers"] = headers
+            await send(message)
+
         try:
-            response = await call_next(request)
-            response.headers["X-Request-ID"] = req_id
-            return response
+            await self.app(scope, receive, send_with_request_id)
         finally:
             # Ensure the ContextVar is cleaned up after request
             correlation_id_var.reset(token)
@@ -70,9 +90,17 @@ def setup_logging(app_env: str = "development"):
     """
     root_logger = logging.getLogger()
     
-    # Prevent duplicate handlers
-    if root_logger.hasHandlers():
-        root_logger.handlers.clear()
+    # Prevent duplicate JustiAssist handlers without clearing Uvicorn handlers
+    has_ja_handler = any(
+        isinstance(h, logging.StreamHandler) and (
+            isinstance(h.formatter, JSONLogFormatter) or
+            any(isinstance(f, ContextFilter) for f in h.filters)
+        )
+        for h in root_logger.handlers
+    )
+    
+    if has_ja_handler:
+        return
         
     root_logger.setLevel(logging.INFO)
     handler = logging.StreamHandler()

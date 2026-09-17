@@ -41,8 +41,9 @@ async def readiness_check():
 
     # Check VectorStore (Required)
     vs_status = "not_ready"
-    if deps.vector_store and deps.vector_store.statutory_index is not None:
-        vs_status = "ready"
+    if deps.vector_store is not None:
+        if deps.vector_store.statutory_index is not None and deps.vector_store.case_law_index is not None:
+            vs_status = "ready"
         
     # Check Redis (Optional, informational only)
     redis_status = "disconnected"
