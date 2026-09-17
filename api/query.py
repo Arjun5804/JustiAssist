@@ -224,37 +224,52 @@ async def query_stream_endpoint(
                 try:
                     res_state = await deps.agent_orchestrator.run(state, on_stage=sync_emit)
                     queue.put_nowait({"type": "complete", "state": res_state})
+                except asyncio.CancelledError:
+                    raise
                 except Exception as e:
                     logger.error(f"Error in orchestrator during SSE: {e}", exc_info=True)
                     queue.put_nowait({"type": "error", "message": "An internal error occurred while processing your request."})
 
             task = asyncio.create_task(run_orchestrator())
             
-            while True:
-                msg = await queue.get()
-                if msg["type"] == "complete":
-                    final_state = msg["state"]
-                    if user:
-                        qtype_val = final_state.query_type.value if hasattr(final_state.query_type, 'value') else final_state.query_type
-                        await save_message(
-                            user_id=user.id, role="assistant", content=final_state.final_answer,
-                            conversation_id=conv_id, query_type=qtype_val,
-                            confidence_score=final_state.confidence_score, grounding_status=final_state.grounding_status,
-                            agents_used=final_state.agents_used, sources_used=final_state.sources_used,
-                            session_id=session_id
-                        )
-                    resp = _state_to_response(final_state).model_dump()
-                    yield f"data: {json.dumps({'type': 'complete', 'data': {'response': resp}})}\n\n"
-                    break
-                elif msg["type"] == "error":
-                    # Generic message already formatted or we can format it here.
-                    # Since queue.put_nowait adds it, we should sanitize it. Wait, the inner error was added to queue.
-                    # Let's sanitize everything just in case.
-                    yield f"data: {json.dumps({'type': 'error', 'message': 'An internal error occurred while processing your request.'})}\n\n"
-                    break
-                else:
-                    yield f"data: {json.dumps(msg)}\n\n"
+            try:
+                while True:
+                    msg = await queue.get()
+                    if msg["type"] == "complete":
+                        final_state = msg["state"]
+                        if user:
+                            qtype_val = final_state.query_type.value if hasattr(final_state.query_type, 'value') else final_state.query_type
+                            await save_message(
+                                user_id=user.id, role="assistant", content=final_state.final_answer,
+                                conversation_id=conv_id, query_type=qtype_val,
+                                confidence_score=final_state.confidence_score, grounding_status=final_state.grounding_status,
+                                agents_used=final_state.agents_used, sources_used=final_state.sources_used,
+                                session_id=session_id
+                            )
+                        resp = _state_to_response(final_state).model_dump()
+                        yield f"data: {json.dumps({'type': 'complete', 'data': {'response': resp}})}\n\n"
+                        break
+                    elif msg["type"] == "error":
+                        # Generic message already formatted or we can format it here.
+                        # Since queue.put_nowait adds it, we should sanitize it. Wait, the inner error was added to queue.
+                        # Let's sanitize everything just in case.
+                        yield f"data: {json.dumps({'type': 'error', 'message': 'An internal error occurred while processing your request.'})}\n\n"
+                        break
+                    else:
+                        yield f"data: {json.dumps(msg)}\n\n"
+            finally:
+                if not task.done():
+                    task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+                except Exception as e:
+                    logger.error(f"Error during SSE task cancellation: {e}", exc_info=True)
                     
+        except asyncio.CancelledError:
+            # Client disconnected early before setup was complete
+            raise
         except Exception as e:
             logger.error(f"Unhandled SSE stream exception: {e}", exc_info=True)
             yield f"data: {json.dumps({'type': 'error', 'message': 'An internal error occurred while processing your request.'})}\n\n"

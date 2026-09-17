@@ -184,7 +184,10 @@ class ExternalRetriever:
     async def _fetch_firecrawl(query: str) -> List[Dict[str, Any]]:
         try:
             service = get_firecrawl_service()
-            return await asyncio.to_thread(service.search, query)
+            return await asyncio.wait_for(asyncio.to_thread(service.search, query), timeout=10.0)
+        except asyncio.TimeoutError:
+            logger.warning("[ExternalRetriever] Firecrawl search timed out")
+            return []
         except Exception as e:
             logger.warning(f"[ExternalRetriever] Firecrawl error: {e}")
             return []
@@ -215,7 +218,7 @@ class ExternalRetriever:
         try:
             scraper = get_news_scraper()
             news_query = " ".join(requested_sections[:2]) + " India law" if requested_sections else "Indian law " + query[:30]
-            articles = await asyncio.to_thread(scraper.fetch_news, news_query)
+            articles = await asyncio.wait_for(asyncio.to_thread(scraper.fetch_news, news_query), timeout=10.0)
             
             # Check if these are fallback articles
             # Fallback articles are identified if no query was sent, but we sent a query.
@@ -236,6 +239,9 @@ class ExternalRetriever:
                     "url": a.url
                 })
             return valid_articles
+        except asyncio.TimeoutError:
+            logger.warning("[ExternalRetriever] News search timed out")
+            return []
         except Exception as e:
             logger.warning(f"[ExternalRetriever] News error: {e}")
             return []
